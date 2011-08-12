@@ -12,6 +12,6 @@ libv8_commonjs_la_CPPFLAGS = \
 libv8_commonjs_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 # install development headers
-pkgincludedir = $(includedir)/v8
+pkgincludedir = $(includedir)/commonjs
 pkginclude_HEADERS = \
 	module.h
