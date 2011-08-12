@@ -30,7 +30,8 @@ depcomp
 INSTALL
 install-sh
 libtool
-cairo-v8-*.tar.gz
+v8-commonjs-*.tar.gz
+v8-module
 ltmain.sh
 m4/libtool.m4
 m4/lt*.m4

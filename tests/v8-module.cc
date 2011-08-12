@@ -28,16 +28,17 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <libgen.h>
 #include <cerrno>
+#include "commonjs/module.h"
 #include <cstdio>
 #include <cstring>
+#include <libgen.h>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "v8/module.h"
 
+using namespace commonjs;
 using namespace std;
 using namespace v8;
 
@@ -48,7 +49,7 @@ Handle<Value> Print(const Arguments& args)
 		if (i != 0) {
 			fputc(' ', stdout);
 		}
-		v8::String::Utf8Value s(args[i]);
+		String::Utf8Value s(args[i]);
 		fwrite(*s, sizeof(**s), s.length(), stdout);
 	}
 	fputc('\n', stdout);
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
 	Context::Scope scope(context);
 	// Initialize module loader
 	Module module;
-	if (!module.Initialize(argc, argv)) {
+	if (!module.Initialize(&argc, &argv)) {
 		fprintf(stderr, "error: module loader: %s\n",
 				module.Exception());
 		context.Dispose();

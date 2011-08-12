@@ -25,18 +25,17 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef V8_MODULE_H
-#define V8_MODULE_H
+#ifndef COMMONJS_MODULE_H
+#define COMMONJS_MODULE_H
 
 #include <map>
 #include <string>
-#include <vector>
 #include <v8.h>
 
-namespace v8 {
+namespace commonjs {
 
 /**
- * The v8 JavaScript module loader
+ * A CommonJS 1.1 module loader
  */
 class Module {
 public:
@@ -46,48 +45,64 @@ public:
 
 	const char* Exception() const;
 
-	bool Initialize(int argc, char *argv[]);
+	bool Initialize(int* argc, char*** argv);
 
 private:
-	char exception_[256];
+	std::string exception_;
 
 	bool initialized_;
 
-	Local<Context> context_;
+	v8::Handle<v8::Context> context_;
 
-	int argc_;
+	int *argc_;
 
-	char **argv_;
+	char ***argv_;
 
-	std::vector<std::string> path_;
+	v8::Persistent<v8::Array> path_;
 
-	std::map<std::string, void*> handles_;
+	std::map<std::string, struct module*> modules_;
 
-	Module(Module const&);
+	Module(Module const& that);
 
-	void operator=(Module const&);
+	void operator=(Module const& that);
 
-	void SetException(const char* exception);
+	static v8::Handle<v8::Value> Require(const v8::Arguments& args);
 
-	static Handle<Value> Import(const Arguments& args);
+	v8::Handle<v8::Value> RequireSharedObject(const char* module,
+			const char* path);
 
-	static Handle<Value> GetPathIndex(uint32_t index,
-			const AccessorInfo &info);
+	v8::Handle<v8::Value> RequireScript(const char* module,
+			const char* path);
 
-	static Handle<Value> SetPathIndex(uint32_t index, Local<Value> value,
-			const AccessorInfo& info);
-
-	static Handle<Integer> QueryPathIndex(uint32_t index,
-			const AccessorInfo &info);
-
-	static Handle<Boolean> DeletePathIndex(uint32_t index,
-			const AccessorInfo &info);
-
-	static Handle<Array> EnumeratePathIndex(const AccessorInfo& info);
+	v8::Handle<v8::Value> RequireModule(const char* module,
+			const char* path);
 };
 
-typedef Handle<Object> (*InitializeCallback)(Handle<Template> templ, int argc,
-		char *argv[]);
+typedef v8::Handle<v8::Object> (*InitializeCallback)(int* argc, char*** argv);
+
+struct module {
+	int version_major;
+	int version_minor;
+	InitializeCallback initialize;
+	v8::Persistent<v8::Object> object;
+	void* handle;
+};
+
 }
 
-#endif // V8_MODULE_H
+#define COMMONJS_MODULE_VERSION_MAJOR (1)
+
+#define COMMONJS_MODULE_VERSION_MINOR (1)
+
+#define COMMONJS_MODULE(name, initialize) \
+extern "C" { \
+	commonjs::module name## _module = { \
+		COMMONJS_MODULE_VERSION_MAJOR, \
+		COMMONJS_MODULE_VERSION_MINOR, \
+		initialize, \
+		v8::Persistent<v8::Object>(), \
+		0 \
+	}; \
+}
+
+#endif // COMMONJS_MODULE_H

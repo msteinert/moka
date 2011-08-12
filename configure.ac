@@ -14,13 +14,13 @@ m4_define([minor_version], [1])
 m4_define([micro_version], [0])
 m4_define([interface_age], [0])
 # Initialize autoconf & automake
-AC_INIT([V8-Module], [major_version.minor_version.micro_version],
-	[http://github.com/msteinert/v8-module/issues/], [v8-module],
-	[http://msteinert.github.com/v8-module/])
+AC_INIT([V8-CommonJS], [major_version.minor_version.micro_version],
+	[http://github.com/msteinert/v8-commonjs/issues/], [v8-commonjs],
+	[http://msteinert.github.com/v8-commonjs/])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
-AC_CONFIG_SRCDIR([v8/module.h])
+AC_CONFIG_SRCDIR([commonjs/module.h])
 # Initialize Libtool
 LT_PREREQ([2.2])
 LT_INIT([disable-static])
@@ -62,7 +62,7 @@ AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
 	Makefile
 	tests/Makefile
-	v8/Makefile
+	commonjs/Makefile
 ])
 AC_OUTPUT
 AC_MSG_RESULT([
