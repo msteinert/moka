@@ -15,4 +15,4 @@ v8_module_SOURCES = v8-module.cc
 
 v8_module_CPPFLAGS = -I$(top_srcdir)
 
-v8_module_LDFLAGS = $(top_builddir)/commonjs/libv8-commonjs.la -lv8
+v8_module_LDFLAGS = $(top_builddir)/v8-commonjs/libv8-commonjs.la -lv8

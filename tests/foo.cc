@@ -29,14 +29,16 @@
 #include "config.h"
 #endif
 
-#include "commonjs/module.h"
+#include "v8-commonjs/module.h"
 
 using namespace v8;
 
 static Handle<Object> foo_initialize(int* argc, char*** argv)
 {
-	HandleScope handle_scope;
-	return handle_scope.Close(Object::New());
+  HandleScope handle_scope;
+  return handle_scope.Close(Object::New());
 }
 
 COMMONJS_MODULE(foo, foo_initialize)
+
+// vim: tabstop=2:sw=2:expandtab

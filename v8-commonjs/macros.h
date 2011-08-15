@@ -25,84 +25,15 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef COMMONJS_MODULE_H
-#define COMMONJS_MODULE_H
+#ifndef COMMONJS_MACROS_H
+#define COMMONJS_MACROS_H
 
-#include <map>
-#include <string>
-#include <v8.h>
+#if defined(__GNUC__) && (__GNUC__ >= 4)
+#define COMMONJSEXPORT __attribute__ ((visibility("default")))
+#else
+#define COMMONJSEXPORT
+#endif
 
-namespace commonjs {
+#endif // COMMONJS_MACROS_H
 
-/**
- * A CommonJS 1.1 module loader
- */
-class Module {
-public:
-	Module();
-
-	~Module();
-
-	const char* Exception() const;
-
-	bool Initialize(int* argc, char*** argv);
-
-private:
-	std::string exception_;
-
-	bool initialized_;
-
-	v8::Handle<v8::Context> context_;
-
-	int *argc_;
-
-	char ***argv_;
-
-	v8::Persistent<v8::Array> path_;
-
-	std::map<std::string, struct module*> modules_;
-
-	Module(Module const& that);
-
-	void operator=(Module const& that);
-
-	static v8::Handle<v8::Value> Require(const v8::Arguments& args);
-
-	v8::Handle<v8::Value> RequireSharedObject(const char* module,
-			const char* path);
-
-	v8::Handle<v8::Value> RequireScript(const char* module,
-			const char* path);
-
-	v8::Handle<v8::Value> RequireModule(const char* module,
-			const char* path);
-};
-
-typedef v8::Handle<v8::Object> (*InitializeCallback)(int* argc, char*** argv);
-
-struct module {
-	int version_major;
-	int version_minor;
-	InitializeCallback initialize;
-	v8::Persistent<v8::Object> object;
-	void* handle;
-};
-
-}
-
-#define COMMONJS_MODULE_VERSION_MAJOR (1)
-
-#define COMMONJS_MODULE_VERSION_MINOR (1)
-
-#define COMMONJS_MODULE(name, initialize) \
-extern "C" { \
-	commonjs::module name## _module = { \
-		COMMONJS_MODULE_VERSION_MAJOR, \
-		COMMONJS_MODULE_VERSION_MINOR, \
-		initialize, \
-		v8::Persistent<v8::Object>(), \
-		0 \
-	}; \
-}
-
-#endif // COMMONJS_MODULE_H
+// vim: tabstop=2:sw=2:expandtab
