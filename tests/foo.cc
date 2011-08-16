@@ -33,7 +33,7 @@
 
 using namespace v8;
 
-static Handle<Object> foo_initialize(int* argc, char*** argv)
+static Handle<Object> foo_initialize(int* /* argc */, char*** /* argv */)
 {
   HandleScope handle_scope;
   return handle_scope.Close(Object::New());

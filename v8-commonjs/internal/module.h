@@ -25,18 +25,13 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef COMMONJS_MODULE_H
-#define COMMONJS_MODULE_H
+#ifndef COMMONJS_INTERNAL_MODULE_H
+#define COMMONJS_INTERNAL_MODULE_H
 
-#include <v8-commonjs/macros.h>
-#include <map>
 #include <string>
-#include <tr1/memory>
 #include <v8.h>
 
 namespace commonjs {
-
-class Module;
 
 namespace internal {
 
@@ -44,75 +39,62 @@ class Module;
 
 }
 
-typedef std::tr1::shared_ptr<internal::Module> ModulePointer;
-
-typedef std::pair<std::string, ModulePointer> ModulePair;
-
-typedef std::map<std::string, ModulePointer> ModuleMap;
- 
-typedef v8::Handle<v8::Object> (*InitializeCallback)(int* argc, char*** argv);
-
-struct module {
-  int version_major;
-  int version_minor;
-  InitializeCallback initialize;
-};
-
 } // namespace commonjs
 
 /**
  * A CommonJS 1.1 module loader
  */
-class COMMONJSEXPORT commonjs::Module {
+class commonjs::internal::Module {
 public:
-  Module();
+  Module(bool secure, v8::Handle<v8::Object> require,
+      v8::Handle<v8::Context> context);
 
-  Module(bool secure);
+  Module(bool secure, v8::Handle<v8::Object> require);
 
   ~Module();
 
-  const char* GetError() const {
-    return error_.c_str();
+  const v8::Handle<v8::Value> Exception() const {
+    return exception_;
   }
 
-  bool Initialize(const char* id);
+  bool Initialize(const char* id, const char* uri);
 
-  bool Initialize(const char* id, int* argc, char*** argv);
+  bool RequireScript(const char* id, const char* path);
 
+  const v8::Handle<v8::Object> GetModule() const {
+    return module_;
+  }
+
+  const v8::Handle<v8::Object> GetExports() const {
+    return exports_;
+  }
+
+  const char* GetDirname() const {
+    return dirname_.c_str();
+  }
+
+  const char* GetId() const {
+    return id_.c_str();
+  }
+    
 private: // non-copyable
   Module(Module const& that);
 
   void operator=(Module const& that);
 
-private: // private methods
-  static v8::Handle<v8::Value> Require(const v8::Arguments& args);
-
 private: // private data
-  std::string error_;
-  bool initialized_;
   bool secure_;
-  v8::Handle<v8::Context> context_;
-  int *argc_;
-  char ***argv_;
+  bool context_owner_;
+  v8::Persistent<v8::Context> context_;
   v8::Persistent<v8::Object> require_;
-  v8::Persistent<v8::Array> paths_;
-  ModuleMap modules_;
-  ModulePointer current_;
+  v8::Persistent<v8::Object> exports_;
+  v8::Persistent<v8::Object> module_;
+  v8::Persistent<v8::Value> exception_;
+  void* handle_;
+  std::string dirname_;
+  std::string id_;
 };
 
-#define COMMONJS_MODULE_VERSION_MAJOR (1)
-
-#define COMMONJS_MODULE_VERSION_MINOR (1)
-
-#define COMMONJS_MODULE(name, initialize) \
-extern "C" { \
-  commonjs::module name## _module = { \
-    COMMONJS_MODULE_VERSION_MAJOR, \
-    COMMONJS_MODULE_VERSION_MINOR, \
-    initialize, \
-  }; \
-}
-
-#endif // COMMONJS_MODULE_H
+#endif // COMMONJS_INTERNAL_MODULE_H
 
 // vim: tabstop=2:sw=2:expandtab

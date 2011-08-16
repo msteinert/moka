@@ -4,6 +4,8 @@
 # library definition
 lib_LTLIBRARIES = libv8-commonjs.la
 libv8_commonjs_la_SOURCES = \
+	internal/module.cc \
+	internal/module.h \
 	module.cc
 # include directories & compiler switches
 libv8_commonjs_la_CPPFLAGS = \
