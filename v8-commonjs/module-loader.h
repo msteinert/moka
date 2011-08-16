@@ -25,19 +25,75 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef V8_COMMONJS_MODULE_LOADER_H
+#define V8_COMMONJS_MODULE_LOADER_H
 
-#include "v8-commonjs/commonjs.h"
+#include <v8-commonjs/macros.h>
+#include <stack>
+#include <string>
+#include <tr1/memory>
+#include <v8.h>
 
-static v8::Handle<v8::Object> foo_initialize(v8::Handle<v8::Object> exports,
-    int* /* argc */, char*** /* argv */)
-{
-  v8::HandleScope handle_scope;
-  return handle_scope.Close(exports);
-}
+namespace commonjs {
 
-COMMONJS_MODULE(foo, foo_initialize)
+class ModuleLoader;
+
+namespace internal {
+
+class Module;
+
+class ModuleFactory;
+
+} // namespace internal
+
+typedef std::tr1::shared_ptr<internal::Module> ModulePointer;
+
+typedef std::tr1::shared_ptr<internal::ModuleFactory> ModuleFactoryPointer;
+
+typedef std::stack<ModulePointer> ModuleStack;
+
+} // namespace commonjs
+
+/**
+ * A CommonJS 1.1 module loader
+ */
+class COMMONJSEXPORT commonjs::ModuleLoader {
+public:
+  ModuleLoader();
+
+  ModuleLoader(bool secure);
+
+  ~ModuleLoader();
+
+  const char* GetError() const {
+    return error_.c_str();
+  }
+
+  bool Initialize(const char* file_name);
+
+  bool Initialize(const char* file_name, int* argc, char*** argv);
+
+private: // non-copyable
+  ModuleLoader(ModuleLoader const& that);
+
+  void operator=(ModuleLoader const& that);
+
+private: // private methods
+  static v8::Handle<v8::Value> Require(const v8::Arguments& args);
+
+private: // private data
+  std::string error_;
+  bool initialized_;
+  bool secure_;
+  v8::Handle<v8::Context> context_;
+  int *argc_;
+  char ***argv_;
+  v8::Persistent<v8::Object> require_;
+  v8::Persistent<v8::Array> paths_;
+  ModuleFactoryPointer module_factory_;
+  ModuleStack module_stack_;
+};
+
+#endif // V8_COMMONJS_MODULE_LOADER_H
 
 // vim: tabstop=2:sw=2:expandtab

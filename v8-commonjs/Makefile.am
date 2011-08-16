@@ -4,9 +4,13 @@
 # library definition
 lib_LTLIBRARIES = libv8-commonjs.la
 libv8_commonjs_la_SOURCES = \
-	internal/module.cc \
-	internal/module.h \
-	module.cc
+	module.cc \
+	module.h \
+	module-factory.cc \
+	module-factory.h \
+	module-loader.cc \
+	script-module.cc \
+	script-module.h
 # include directories & compiler switches
 libv8_commonjs_la_CPPFLAGS = \
 	-DLIBDIR=\"$(libdir)\" \
@@ -16,4 +20,5 @@ libv8_commonjs_la_LDFLAGS = \
 # install development headers
 pkgincludedir = $(includedir)/v8-commonjs
 pkginclude_HEADERS = \
-	module.h
+	commonjs.h \
+	module-loader.h

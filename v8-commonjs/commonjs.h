@@ -25,19 +25,38 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef V8_COMMONJS_H
+#define V8_COMMONJS_H
 
-#include "v8-commonjs/commonjs.h"
+#include <v8-commonjs/module.h>
+#include <v8-commonjs/module-loader.h>
 
-static v8::Handle<v8::Object> foo_initialize(v8::Handle<v8::Object> exports,
-    int* /* argc */, char*** /* argv */)
-{
-  v8::HandleScope handle_scope;
-  return handle_scope.Close(exports);
+namespace commonjs {
+
+typedef v8::Handle<v8::Object> (*InitializeCallback)(
+    v8::Handle<v8::Object> exports, int* argc, char*** argv);
+
+struct module {
+  int version_major;
+  int version_minor;
+  InitializeCallback initialize;
+};
+
+} // namespace commonjs
+
+#define COMMONJS_MODULE_VERSION_MAJOR (1)
+
+#define COMMONJS_MODULE_VERSION_MINOR (1)
+
+#define COMMONJS_MODULE(name, initialize) \
+extern "C" { \
+  commonjs::module name## _module = { \
+    COMMONJS_MODULE_VERSION_MAJOR, \
+    COMMONJS_MODULE_VERSION_MINOR, \
+    initialize, \
+  }; \
 }
 
-COMMONJS_MODULE(foo, foo_initialize)
+#endif // V8_COMMONJS_H
 
 // vim: tabstop=2:sw=2:expandtab

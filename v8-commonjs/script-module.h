@@ -25,19 +25,40 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef V8_COMMONJS_SCRIPT_MODULE_H
+#define V8_COMMONJS_SCRIPT_MODULE_H
 
-#include "v8-commonjs/commonjs.h"
+#include <cstdio>
+#include <v8.h>
+#include "v8-commonjs/module.h"
 
-static v8::Handle<v8::Object> foo_initialize(v8::Handle<v8::Object> exports,
-    int* /* argc */, char*** /* argv */)
-{
-  v8::HandleScope handle_scope;
-  return handle_scope.Close(exports);
-}
+namespace commonjs {
 
-COMMONJS_MODULE(foo, foo_initialize)
+namespace internal {
+
+class ScriptModule;
+
+} // namespace internal
+
+} // namespace commonjs
+
+/**
+ * A CommonJS 1.1 script module
+ */
+class commonjs::internal::ScriptModule: public commonjs::internal::Module {
+public:
+  ScriptModule(const char* id, const char* file_name, bool secure,
+      v8::Handle<v8::Object> require, FILE* file, size_t size);
+
+  virtual ~ScriptModule();
+
+  virtual v8::Handle<v8::Value> Load();
+
+private:
+  FILE* file_;
+  size_t size_;
+};
+
+#endif // V8_COMMONJS_SCRIPT_MODULE_H
 
 // vim: tabstop=2:sw=2:expandtab

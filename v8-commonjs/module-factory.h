@@ -25,76 +25,57 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef COMMONJS_INTERNAL_MODULE_H
-#define COMMONJS_INTERNAL_MODULE_H
+#ifndef V8_COMMONJS_MODULE_FACTORY_H
+#define V8_COMMONJS_MODULE_FACTORY_H
 
-#include <string>
-#include <v8.h>
+#include <climits>
+#include <map>
+#include <tr1/memory>
+#include "v8-commonjs/script-module.h"
 
 namespace commonjs {
 
 namespace internal {
 
-class Module;
+class ModuleFactory;
 
-}
+typedef std::tr1::shared_ptr<Module> ModulePointer;
+
+typedef std::pair<std::string, ModulePointer> ModulePair;
+
+typedef std::map<std::string, ModulePointer> ModuleMap;
+
+} // namespace internal
 
 } // namespace commonjs
 
 /**
- * A CommonJS 1.1 module loader
+ * A CommonJS 1.1 module factory
  */
-class commonjs::internal::Module {
+class commonjs::internal::ModuleFactory {
 public:
-  Module(bool secure, v8::Handle<v8::Object> require,
-      v8::Handle<v8::Context> context);
+  ModuleFactory(bool secure, v8::Handle<v8::Object> require,
+      ModulePointer module);
 
-  Module(bool secure, v8::Handle<v8::Object> require);
+  ~ModuleFactory() {}
 
-  ~Module();
+  ModulePointer NewModule(const char* id, const char* path,
+      int* argc_, char*** argv_);
 
-  const v8::Handle<v8::Value> Exception() const {
-    return exception_;
-  }
+  ModulePointer NewScriptModule(const char* id, const char* path);
 
-  bool Initialize(const char* id, const char* uri);
-
-  bool RequireScript(const char* id, const char* path);
-
-  const v8::Handle<v8::Object> GetModule() const {
-    return module_;
-  }
-
-  const v8::Handle<v8::Object> GetExports() const {
-    return exports_;
-  }
-
-  const char* GetDirname() const {
-    return dirname_.c_str();
-  }
-
-  const char* GetId() const {
-    return id_.c_str();
-  }
-    
-private: // non-copyable
-  Module(Module const& that);
+private: // non-copyable/instantiable
+  ModuleFactory(Module const& that);
 
   void operator=(Module const& that);
 
 private: // private data
   bool secure_;
-  bool context_owner_;
-  v8::Persistent<v8::Context> context_;
   v8::Persistent<v8::Object> require_;
-  v8::Persistent<v8::Object> exports_;
-  v8::Persistent<v8::Object> module_;
-  v8::Persistent<v8::Value> exception_;
-  void* handle_;
-  std::string dirname_;
-  std::string id_;
+  ModuleMap modules_;
+  char resolved_path_[PATH_MAX];
 };
 
-#endif // COMMONJS_INTERNAL_MODULE_H
+#endif // V8_COMMONJS_MODULE_FACTORY_H
 
 // vim: tabstop=2:sw=2:expandtab

@@ -25,8 +25,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef COMMONJS_MACROS_H
-#define COMMONJS_MACROS_H
+#ifndef V8_COMMONJS_MACROS_H
+#define V8_COMMONJS_MACROS_H
 
 #if defined(__GNUC__) && (__GNUC__ >= 4)
 #define COMMONJSEXPORT __attribute__ ((visibility("default")))
@@ -34,6 +34,6 @@
 #define COMMONJSEXPORT
 #endif
 
-#endif // COMMONJS_MACROS_H
+#endif // V8_COMMONJS_MACROS_H
 
 // vim: tabstop=2:sw=2:expandtab

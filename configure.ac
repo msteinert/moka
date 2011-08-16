@@ -20,7 +20,7 @@ AC_INIT([V8-CommonJS], [major_version.minor_version.micro_version],
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
-AC_CONFIG_SRCDIR([v8-commonjs/module.h])
+AC_CONFIG_SRCDIR([v8-commonjs/commonjs.h])
 # Initialize Libtool
 LT_PREREQ([2.2])
 LT_INIT([disable-static])

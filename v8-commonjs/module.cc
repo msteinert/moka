@@ -29,230 +29,125 @@
 #include "config.h"
 #endif
 
-#include "v8-commonjs/internal/module.h"
-#include "v8-commonjs/module.h"
-#include <cerrno>
-#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
-#include <sstream>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <unistd.h>
+#include <libgen.h>
+#include "v8-commonjs/module.h"
 
 namespace commonjs {
 
-Module::Module()
-  : error_("None")
-  , initialized_(false)
-  , secure_(false) {}
+namespace internal {
 
-Module::Module(bool secure)
-  : error_("None")
+Module::Module(const char* id, const char* file_name, bool secure,
+    v8::Handle<v8::Object> require, v8::Handle<v8::Context> context)
+  : id_(id)
+  , file_name_(file_name)
+  , directory_name_(NULL)
+  , secure_(secure)
   , initialized_(false)
-  , secure_(secure) {}
+  , context_owner_(false)
+  , context_(context)
+  , require_(require) {}
+
+Module::Module(const char* id, const char* file_name, bool secure,
+    v8::Handle<v8::Object> require)
+  : id_(id)
+  , file_name_(file_name)
+  , directory_name_(NULL)
+  , secure_(secure)
+  , initialized_(false)
+  , context_owner_(true)
+  , context_(v8::Context::New())
+  , require_(require) {}
 
 Module::~Module() {
-  require_.Dispose();
-  paths_.Dispose();
+  if (directory_name_) {
+    ::free(directory_name_);
+    directory_name_ = NULL;
+  }
+  module_.Dispose();
+  exports_.Dispose();
+  if (context_owner_) {
+    context_.Dispose();
+  }
 }
 
-bool Module::Initialize(const char* id) {
-  return Initialize(id, NULL, NULL);
-}
-
-bool Module::Initialize(const char* file_name, int* argc, char*** argv) {
+bool Module::Initialize() {
   v8::HandleScope handle_scope;
   if (initialized_) {
-    error_.assign("Already initialized");
-    return false;
+    return true;
   }
-  context_ = v8::Context::GetEntered();
-  if (context_.IsEmpty()) {
-    error_.assign("No currently entered context");
-    return false;
-  }
-  argc_ = argc;
-  argv_ = argv;
-  // Create 'require' object
-  v8::Handle<v8::ObjectTemplate> require_templ = v8::ObjectTemplate::New();
-  require_templ->SetInternalFieldCount(1);
-  require_templ->SetCallAsFunctionHandler(Require);
-  // Create 'paths' object
-  v8::Local<v8::Array> paths = v8::Array::New();
-  uint32_t index = 0;
+  v8::Context::Scope scope(context_);
   if (!secure_) {
-    // Add directories from environment
-    const char* env = getenv("COMMONJSPATH");
-    if (env) {
-      std::string path;
-      std::stringstream commonjspath(env);
-      while (std::getline(commonjspath, path, ':')) {
-        paths->Set(index++, v8::String::New(path.c_str()));
-      }
-    }
-    // Add current working directory
-    paths->Set(index++, v8::String::New("."));
-    // Add $HOME/lib/commonjs
-    env = getenv("HOME");
-    if (env) {
-      std::string home(env);
-      home.append("/lib/commonjs");
-      paths->Set(index++, v8::String::New(home.c_str()));
-    }
+    // Add the print function for testing
+    v8::Local<v8::FunctionTemplate> print_templ =
+      v8::FunctionTemplate::New(Print);
+    context_->Global()->Set(v8::String::New("print"),
+        print_templ->GetFunction());
   }
-  // Add $libdir/commonjs
-  paths->Set(index++, v8::String::New(LIBDIR "/commonjs"));
+  context_->Global()->Set(v8::String::NewSymbol("require"), require_);
+  // Initialize exports
+  v8::Local<v8::Object> exports = v8::Object::New();
   // Store 'paths' as a persistent object
-  paths_ = v8::Persistent<v8::Array>::New(paths);
+  exports_ = v8::Persistent<v8::Object>::New(exports);
+  // Create 'exports' object
+  context_->Global()->Set(v8::String::NewSymbol("exports"), exports_);
+  // Initialize module
+  v8::Local<v8::Object> module = v8::Object::New();
+  // Create the 'id' property
+  module->Set(v8::String::NewSymbol("id"), v8::String::New(id_.c_str()),
+      static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
   if (!secure_) {
-    require_templ->Set(v8::String::NewSymbol("paths"), paths_,
+    // Create the 'uri' property
+    std::string uri("file://");
+    uri.append(file_name_);
+    module->Set(v8::String::NewSymbol("uri"), v8::String::New(uri.c_str()),
         static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
   }
-  // Export 'require' object
-  v8::Local<v8::Object> require = require_templ->NewInstance();
-  require->SetInternalField(0, v8::External::New(this));
-  require_ = v8::Persistent<v8::Object>::New(require);
-  // Create 'main' module
-  ModulePointer module(new internal::Module(secure_, require_, context_));
-  if (!module.get()) {
-    error_.assign("Out of memory");
-    return false;
-  }
-  std::string id(basename(file_name));
-  size_t dot = id.find_first_of(".");
-  if (std::string::npos != dot) {
-    id.erase(dot);
-  }
-  if (!module->Initialize(id.c_str(), file_name)) {
-    error_.assign("Failed to initialize main module");
-    return false;
-  }
-  modules_.insert(ModulePair(id, module));
-  // Create 'main' object
-  require_->Set(v8::String::NewSymbol("main"), module->GetModule(),
-      static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
+  // Store 'module' as a persistent object
+  module_ = v8::Persistent<v8::Object>::New(module);
+  // Create 'module' object
+  context_->Global()->Set(v8::String::NewSymbol("module"), module_);
   initialized_ = true;
   return true;
 }
 
-v8::Handle<v8::Value> Module::Require(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (arguments.Length() != 1) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("A single argument is required")));
-  }
-  if (!arguments[0]->IsString()) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("Argument one must be a string")));
-  }
-  std::string id(*v8::String::Utf8Value(arguments[0]));
-  v8::Local<v8::Object> object = arguments.Holder();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Module* module = static_cast<Module*>(external->Value());
-  if (!module->initialized_) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("Module loader is not initialized")));
-  }
-  ModuleMap::iterator iter = module->modules_.find(id);
-  if (module->modules_.end() != iter) {
-    return (*iter).second->GetExports();
-  }
-  v8::Local<v8::Array> properties = module->paths_->GetPropertyNames();
-  if (properties.IsEmpty()) {
-    return handle_scope.Close(v8::Handle<v8::Value>());
-  }
-  uint32_t index = 0;
-  if (id[0] != '.') {
-    ModulePointer internal_module(
-        new internal::Module(module->secure_, module->require_));
-    if (!internal_module.get()) {
-      return handle_scope.Close(v8::ThrowException(
-            v8::String::New("Out of memory")));
+v8::Handle<v8::Value> Module::Print(const v8::Arguments& args) {
+  for (int i = 0; i < args.Length(); ++i) {
+    v8::HandleScope handle_scope;
+    if (i != 0) {
+      ::fputc(' ', stdout);
     }
-    module->modules_.insert(ModulePair(id, internal_module));
-    module->current_ = internal_module;
-    while (index < properties->Length()) {
-      v8::Local<v8::Value> index_value = properties->Get(index++);
-      if (!index_value->IsUint32()) {
-        module->current_.reset();
-        module->modules_.erase(id);
-        return handle_scope.Close(v8::ThrowException(
-              v8::String::New("Index error")));
-      }
-      v8::Local<v8::Value> path_value =
-        module->paths_->Get(index_value->Uint32Value());
-      if (path_value.IsEmpty()) {
-        module->current_.reset();
-        module->modules_.erase(id);
-        return handle_scope.Close(v8::ThrowException(
-              v8::String::New("Index error")));
-      }
-      if (path_value->IsString()) {
-        bool success = internal_module->RequireScript(id.c_str(),
-            *v8::String::Utf8Value(path_value));
-        if (success) {
-          module->current_.reset();
-          return internal_module->GetExports();
-        } else {
-          v8::Handle<v8::Value> exception = internal_module->Exception();
-          if (!exception.IsEmpty()) {
-            module->current_.reset();
-            module->modules_.erase(id);
-            return exception;
-          }
-        }
-      }
-    }
-    module->modules_.erase(id);
-  } else {
-    // relative
-    if (module->current_.get()) {
-      std::string file_name(module->current_->GetDirname());
-      file_name.append("/");
-      file_name.append(id);
-      file_name.append(".js");
-      char resolved_path[PATH_MAX];
-      if (!realpath(file_name.c_str(), resolved_path)) {
-        char error[BUFSIZ];
-        strerror_r(errno, error, BUFSIZ);
-        module->current_.reset();
-        return handle_scope.Close(v8::ThrowException(v8::String::New(error)));
-      }
-      char* slash = strrchr(resolved_path, '/');
-      *slash = '\0';
-      ModulePointer internal_module(
-          new internal::Module(module->secure_, module->require_));
-      if (!internal_module.get()) {
-        return handle_scope.Close(v8::ThrowException(
-              v8::String::New("Out of memory")));
-      }
-      slash = strrchr(id.c_str(), '/');
-      ++slash;
-      module->modules_.insert(ModulePair(slash, internal_module));
-      bool success = internal_module->RequireScript(slash, resolved_path);
-      if (success) {
-        module->current_.reset();
-        return internal_module->GetExports();
-      } else {
-        v8::Handle<v8::Value> exception = internal_module->Exception();
-        if (!exception.IsEmpty()) {
-          module->current_.reset();
-          module->modules_.erase(slash);
-          return exception;
-        }
-      }
-      module->modules_.erase(slash);
-    }
+    v8::String::Utf8Value s(args[i]->ToString());
+    ::fwrite(*s, sizeof(**s), s.length(), stdout);
   }
-  module->current_.reset();
-  std::string error("No module named ");
-  error.append(id);
-  return handle_scope.Close(v8::ThrowException(v8::String::New(error.c_str())));
+  ::fputc('\n', stdout);
+  ::fflush(stdout);
+  return v8::Undefined();
 }
+
+const char* Module::GetDirectoryName() {
+  if (!directory_name_) {
+    char* file_name = static_cast<char*>(
+        ::malloc(strlen(file_name_.c_str()) + 1));
+    if (!file_name) {
+      return NULL;
+    }
+    strcpy(file_name, file_name_.c_str());
+    char* directory_name = ::dirname(file_name);
+    if (!directory_name) {
+      ::free(file_name);
+      return NULL;
+    }
+    directory_name_ = static_cast<char*>(::malloc(strlen(directory_name) + 1));
+    ::strcpy(directory_name_, directory_name);
+    ::free(file_name);
+  }
+  return directory_name_;
+}
+
+} // namespace internal
 
 } // namespace commonjs
 

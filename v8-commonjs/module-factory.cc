@@ -25,19 +25,67 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <cstdlib>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include "v8-commonjs/module-factory.h"
+#include "v8-commonjs/script-module.h"
 
-#include "v8-commonjs/commonjs.h"
+namespace commonjs {
 
-static v8::Handle<v8::Object> foo_initialize(v8::Handle<v8::Object> exports,
-    int* /* argc */, char*** /* argv */)
-{
-  v8::HandleScope handle_scope;
-  return handle_scope.Close(exports);
+namespace internal {
+
+ModuleFactory::ModuleFactory(bool secure, v8::Handle<v8::Object> require,
+    ModulePointer module)
+  : secure_(secure)
+  , require_(require) {
+  modules_.insert(ModulePair(module->GetFileName(), module));
 }
 
-COMMONJS_MODULE(foo, foo_initialize)
+ModulePointer ModuleFactory::NewScriptModule(const char* id, const char* path) {
+  ModulePointer module;
+  std::string file_name(path);
+  file_name.append("/");
+  file_name.append(id);
+  file_name.append(".js");
+  if (!realpath(file_name.c_str(), resolved_path_)) {
+    return module;
+  }
+  ModuleMap::iterator iter = modules_.find(resolved_path_);
+  if (modules_.end() != iter) {
+    return (*iter).second;
+  }
+  FILE* file = ::fopen(resolved_path_, "rb");
+  if (!file) {
+    return module;
+  }
+  struct stat buf;
+  if (::fstat(fileno(file), &buf)) {
+    ::fclose(file);
+    return module;
+  }
+  if (!S_ISREG(buf.st_mode)) {
+    ::fclose(file);
+    return module;
+  }
+  module.reset(new ScriptModule(id, resolved_path_, secure_, require_, file,
+        buf.st_size));
+  modules_.insert(ModulePair(module->GetFileName(), module));
+  return module;
+}
+
+ModulePointer ModuleFactory::NewModule(const char* id, const char* path,
+    int* /* argc */, char*** /* argv */) {
+  ModulePointer module = NewScriptModule(id, path);
+  if (module.get()) {
+    return module;
+  }
+  return module;
+}
+
+} // namespace internal
+
+} // namespace commonjs
 
 // vim: tabstop=2:sw=2:expandtab

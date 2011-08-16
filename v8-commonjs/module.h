@@ -25,59 +25,58 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef COMMONJS_MODULE_H
-#define COMMONJS_MODULE_H
+#ifndef V8_COMMONJS_MODULE_H
+#define V8_COMMONJS_MODULE_H
 
-#include <v8-commonjs/macros.h>
-#include <map>
 #include <string>
-#include <tr1/memory>
 #include <v8.h>
 
 namespace commonjs {
-
-class Module;
 
 namespace internal {
 
 class Module;
 
-}
-
-typedef std::tr1::shared_ptr<internal::Module> ModulePointer;
-
-typedef std::pair<std::string, ModulePointer> ModulePair;
-
-typedef std::map<std::string, ModulePointer> ModuleMap;
- 
-typedef v8::Handle<v8::Object> (*InitializeCallback)(int* argc, char*** argv);
-
-struct module {
-  int version_major;
-  int version_minor;
-  InitializeCallback initialize;
-};
+} // namespace internal
 
 } // namespace commonjs
 
 /**
- * A CommonJS 1.1 module loader
+ * A CommonJS 1.1 module
  */
-class COMMONJSEXPORT commonjs::Module {
+class commonjs::internal::Module {
 public:
-  Module();
+  Module(const char* id, const char* file_name, bool secure,
+      v8::Handle<v8::Object> require, v8::Handle<v8::Context> context);
 
-  Module(bool secure);
+  Module(const char* id, const char* file_name, bool secure,
+      v8::Handle<v8::Object> require);
 
-  ~Module();
+  virtual ~Module();
 
-  const char* GetError() const {
-    return error_.c_str();
+  bool Initialize();
+
+  virtual v8::Handle<v8::Value> Load() {
+    return GetExports();
   }
 
-  bool Initialize(const char* id);
+  const char* GetFileName() const {
+    return file_name_.c_str();
+  }
 
-  bool Initialize(const char* id, int* argc, char*** argv);
+  const char* GetDirectoryName();
+
+  const v8::Handle<v8::Context> GetContext() const {
+    return context_;
+  }
+
+  const v8::Handle<v8::Object> GetModule() const {
+    return module_;
+  }
+
+  const v8::Handle<v8::Object> GetExports() const {
+    return exports_;
+  }
 
 private: // non-copyable
   Module(Module const& that);
@@ -85,34 +84,22 @@ private: // non-copyable
   void operator=(Module const& that);
 
 private: // private methods
-  static v8::Handle<v8::Value> Require(const v8::Arguments& args);
+  static v8::Handle<v8::Value> Print(const v8::Arguments& args);
 
 private: // private data
-  std::string error_;
-  bool initialized_;
+  std::string id_;
+  std::string file_name_;
+  char* directory_name_;
   bool secure_;
-  v8::Handle<v8::Context> context_;
-  int *argc_;
-  char ***argv_;
+  bool initialized_;
+  bool context_owner_;
+  v8::Persistent<v8::Context> context_;
   v8::Persistent<v8::Object> require_;
-  v8::Persistent<v8::Array> paths_;
-  ModuleMap modules_;
-  ModulePointer current_;
+  v8::Persistent<v8::Object> exports_;
+  v8::Persistent<v8::Object> module_;
+  void* handle_;
 };
 
-#define COMMONJS_MODULE_VERSION_MAJOR (1)
-
-#define COMMONJS_MODULE_VERSION_MINOR (1)
-
-#define COMMONJS_MODULE(name, initialize) \
-extern "C" { \
-  commonjs::module name## _module = { \
-    COMMONJS_MODULE_VERSION_MAJOR, \
-    COMMONJS_MODULE_VERSION_MINOR, \
-    initialize, \
-  }; \
-}
-
-#endif // COMMONJS_MODULE_H
+#endif // V8_COMMONJS_MODULE_H
 
 // vim: tabstop=2:sw=2:expandtab

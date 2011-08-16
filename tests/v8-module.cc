@@ -30,28 +30,13 @@
 #endif
 
 #include <cerrno>
-#include "v8-commonjs/module.h"
+#include "v8-commonjs/commonjs.h"
 #include <cstdio>
 #include <cstring>
 #include <libgen.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-v8::Handle<v8::Value> Print(const v8::Arguments& args)
-{
-  for (int i = 0; i < args.Length(); ++i) {
-    v8::HandleScope handle_scope;
-    if (i != 0) {
-      fputc(' ', stdout);
-    }
-    v8::String::Utf8Value s(args[i]->ToString());
-    fwrite(*s, sizeof(**s), s.length(), stdout);
-  }
-  fputc('\n', stdout);
-  fflush(stdout);
-  return v8::Undefined();
-}
 
 void Report(v8::TryCatch& try_catch)
 {
@@ -75,19 +60,14 @@ int main(int argc, char *argv[])
   }
   // Create a stack allocated handle scope
   v8::HandleScope handle_scope;
-  // Create a global object template
-  v8::Handle<v8::ObjectTemplate> global_template = v8::ObjectTemplate::New();
-  // Add print function
-  global_template->Set(v8::String::New("print"),
-      v8::FunctionTemplate::New(Print));
   // Create a new context
-  v8::Persistent<v8::Context> context = v8::Context::New(NULL, global_template);
+  v8::Persistent<v8::Context> context = v8::Context::New();
   // Enter the created context
   v8::Context::Scope scope(context);
   // Initialize module loader
-  commonjs::Module module;
-  if (!module.Initialize(argv[1], &argc, &argv)) {
-    fprintf(stderr, "error: module loader: %s\n", module.GetError());
+  commonjs::ModuleLoader loader;
+  if (!loader.Initialize(argv[1], &argc, &argv)) {
+    fprintf(stderr, "error: module loader: %s\n", loader.GetError());
     context.Dispose();
     v8::V8::Dispose();
     return 1;
