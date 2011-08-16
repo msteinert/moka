@@ -26,20 +26,24 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <cstdlib>
+#include <dlfcn.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include "v8-commonjs/module-factory.h"
 #include "v8-commonjs/script-module.h"
+#include "v8-commonjs/so-module.h"
 
 namespace commonjs {
 
 namespace internal {
 
 ModuleFactory::ModuleFactory(bool secure, v8::Handle<v8::Object> require,
-    ModulePointer module)
+    ModulePointer module, int* argc, char*** argv)
   : secure_(secure)
-  , require_(require) {
+  , require_(require)
+  , argc_(argc)
+  , argv_(argv) {
   modules_.insert(ModulePair(module->GetFileName(), module));
 }
 
@@ -71,13 +75,47 @@ ModulePointer ModuleFactory::NewScriptModule(const char* id, const char* path) {
   }
   module.reset(new ScriptModule(id, resolved_path_, secure_, require_, file,
         buf.st_size));
+  if (!module.get()) {
+    ::fclose(file);
+    return module;
+  }
   modules_.insert(ModulePair(module->GetFileName(), module));
   return module;
 }
 
-ModulePointer ModuleFactory::NewModule(const char* id, const char* path,
-    int* /* argc */, char*** /* argv */) {
+ModulePointer ModuleFactory::NewSoModule(const char* id, const char* path) {
+  ModulePointer module;
+  std::string file_name(path);
+  file_name.append("/");
+  file_name.append(id);
+  file_name.append(".so");
+  if (!realpath(file_name.c_str(), resolved_path_)) {
+    return module;
+  }
+  ModuleMap::iterator iter = modules_.find(resolved_path_);
+  if (modules_.end() != iter) {
+    return (*iter).second;
+  }
+  void* handle = ::dlopen(file_name.c_str(), RTLD_LAZY);
+  if (!handle) {
+    return module;
+  }
+  module.reset(new SoModule(id, resolved_path_, secure_, require_, handle,
+        argc_, argv_));
+  if (!module.get()) {
+    ::dlclose(handle);
+    return module;
+  }
+  modules_.insert(ModulePair(module->GetFileName(), module));
+  return module;
+}
+
+ModulePointer ModuleFactory::NewModule(const char* id, const char* path) {
   ModulePointer module = NewScriptModule(id, path);
+  if (module.get()) {
+    return module;
+  }
+  module = NewSoModule(id, path);
   if (module.get()) {
     return module;
   }

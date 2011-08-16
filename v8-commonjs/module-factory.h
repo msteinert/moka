@@ -55,14 +55,25 @@ typedef std::map<std::string, ModulePointer> ModuleMap;
 class commonjs::internal::ModuleFactory {
 public:
   ModuleFactory(bool secure, v8::Handle<v8::Object> require,
-      ModulePointer module);
+      ModulePointer module, int* argc, char*** argv);
 
   ~ModuleFactory() {}
 
-  ModulePointer NewModule(const char* id, const char* path,
-      int* argc_, char*** argv_);
+  ModulePointer NewModule(const char* id, const char* path);
 
   ModulePointer NewScriptModule(const char* id, const char* path);
+
+  ModulePointer NewSoModule(const char* id, const char* path);
+
+  void RemoveModule(ModulePointer module) {
+    if (!module.get()) {
+      return;
+    }
+    ModuleMap::iterator iter = modules_.find(module->GetFileName());
+    if (modules_.end() != iter) {
+      modules_.erase(iter);
+    }
+  }
 
 private: // non-copyable/instantiable
   ModuleFactory(Module const& that);
@@ -72,6 +83,8 @@ private: // non-copyable/instantiable
 private: // private data
   bool secure_;
   v8::Persistent<v8::Object> require_;
+  int* argc_;
+  char*** argv_;
   ModuleMap modules_;
   char resolved_path_[PATH_MAX];
 };

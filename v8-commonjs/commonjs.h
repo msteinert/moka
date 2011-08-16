@@ -31,32 +31,6 @@
 #include <v8-commonjs/module.h>
 #include <v8-commonjs/module-loader.h>
 
-namespace commonjs {
-
-typedef v8::Handle<v8::Object> (*InitializeCallback)(
-    v8::Handle<v8::Object> exports, int* argc, char*** argv);
-
-struct module {
-  int version_major;
-  int version_minor;
-  InitializeCallback initialize;
-};
-
-} // namespace commonjs
-
-#define COMMONJS_MODULE_VERSION_MAJOR (1)
-
-#define COMMONJS_MODULE_VERSION_MINOR (1)
-
-#define COMMONJS_MODULE(name, initialize) \
-extern "C" { \
-  commonjs::module name## _module = { \
-    COMMONJS_MODULE_VERSION_MAJOR, \
-    COMMONJS_MODULE_VERSION_MINOR, \
-    initialize, \
-  }; \
-}
-
 #endif // V8_COMMONJS_H
 
 // vim: tabstop=2:sw=2:expandtab

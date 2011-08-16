@@ -37,8 +37,6 @@
 
 namespace commonjs {
 
-namespace internal {
-
 Module::Module(const char* id, const char* file_name, bool secure,
     v8::Handle<v8::Object> require, v8::Handle<v8::Context> context)
   : id_(id)
@@ -146,8 +144,6 @@ const char* Module::GetDirectoryName() {
   }
   return directory_name_;
 }
-
-} // namespace internal
 
 } // namespace commonjs
 

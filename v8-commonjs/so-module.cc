@@ -29,20 +29,65 @@
 #include "config.h"
 #endif
 
-#include "v8-commonjs/module.h"
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+#include <dlfcn.h>
+#include <v8-commonjs/so-module.h>
 
-static bool foo_initialize(commonjs::Module module,
-    int* /* argc */, char*** /* argv */)
-{
+namespace commonjs {
+
+namespace internal {
+
+SoModule::SoModule(const char* id, const char* file_name, bool secure,
+    v8::Handle<v8::Object> require, void* handle, int* argc, char*** argv)
+  : Module(id, file_name, secure, require)
+  , handle_(handle)
+  , argc_(argc)
+  , argv_(argv)
+  , loaded_(false) {}
+
+SoModule::~SoModule() {
+  if (handle_) {
+    ::dlclose(handle_);
+  }
+}
+
+bool SoModule::Load() {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Object> exports = module.GetExports();
-  if (exports.IsEmpty()) {
-    module.SetException("Exports is NULL");
+  if (!Initialize()) {
+    SetException("Module initialization failed");
     return false;
   }
+  if (loaded_) {
+    return true;
+  }
+  if (!handle_) {
+    SetException("Shared object handle is NULL");
+    return false;
+  }
+  const struct module* init =
+    static_cast<const struct module*>(::dlsym(handle_, "commonjs_initialize"));
+  if (!init) {
+    char error[BUFSIZ];
+    ::strerror_r(errno, error, BUFSIZ);
+    SetException(error);
+    return false;
+  }
+  if (init->version_major != COMMONJS_MODULE_VERSION_MAJOR) {
+    SetException("Module major version must match");
+    return false;
+  }
+  if (init->version_minor < COMMONJS_MODULE_VERSION_MINOR) {
+    SetException("Module minor version not supported");
+    return false;
+  }
+  v8::Context::Scope scope(GetContext());
   return true;
 }
 
-COMMONJS_MODULE(foo_initialize)
+} // namespace internal
+
+} // namespace commonjs
 
 // vim: tabstop=2:sw=2:expandtab

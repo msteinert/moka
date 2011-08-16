@@ -50,21 +50,22 @@ ScriptModule::~ScriptModule() {
   }
 }
 
-v8::Handle<v8::Value> ScriptModule::Load() {
+bool ScriptModule::Load() {
   v8::HandleScope handle_scope;
   if (!Initialize()) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("Module initialization failed")));
+    SetException("Module initialization failed");
+    return false;
   }
   if (!file_) {
-    return handle_scope.Close(GetExports());
+    return true;
   }
   ::rewind(file_);
   char* characters = static_cast<char*>(::malloc(size_ + 1));
   if (!characters) {
     char error[BUFSIZ];
     ::strerror_r(errno, error, BUFSIZ);
-    return handle_scope.Close(v8::ThrowException(v8::String::New(error)));
+    SetException(error);
+    return false;
   }
   size_t size = ::fread(characters, 1, size_, file_);
   if (static_cast<off_t>(size) < size_) {
@@ -72,7 +73,8 @@ v8::Handle<v8::Value> ScriptModule::Load() {
       ::free(characters);
       char error[BUFSIZ];
       ::strerror_r(errno, error, BUFSIZ);
-      return handle_scope.Close(v8::ThrowException(v8::String::New(error)));
+      SetException(error);
+      return false;
     }
     ::clearerr(file_);
   }
@@ -85,13 +87,15 @@ v8::Handle<v8::Value> ScriptModule::Load() {
   v8::Local<v8::Script> script = v8::Script::Compile(source,
       v8::String::New(GetFileName()));
   if (script.IsEmpty()) {
-    return handle_scope.Close(try_catch.ReThrow());
+    SetException(handle_scope.Close(try_catch.ReThrow()));
+    return false;
   }
   v8::Local<v8::Value> result = script->Run();
   if (result.IsEmpty()) {
-    return handle_scope.Close(try_catch.ReThrow());
+    SetException(handle_scope.Close(try_catch.ReThrow()));
+    return false;
   }
-  return handle_scope.Close(GetExports());
+  return true;
 }
 
 } // namespace internal

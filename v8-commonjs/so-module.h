@@ -25,24 +25,41 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef V8_COMMONJS_SO_MODULE_H
+#define V8_COMMONJS_SO_MODULE_H
 
+#include <v8.h>
 #include "v8-commonjs/module.h"
 
-static bool foo_initialize(commonjs::Module module,
-    int* /* argc */, char*** /* argv */)
-{
-  v8::HandleScope handle_scope;
-  v8::Handle<v8::Object> exports = module.GetExports();
-  if (exports.IsEmpty()) {
-    module.SetException("Exports is NULL");
-    return false;
-  }
-  return true;
-}
+namespace commonjs {
 
-COMMONJS_MODULE(foo_initialize)
+namespace internal {
+
+class SoModule;
+
+} // namespace internal
+
+} // namespace commonjs
+
+/**
+ * A CommonJS 1.1 shared-object module
+ */
+class commonjs::internal::SoModule: public commonjs::Module {
+public:
+  SoModule(const char* id, const char* file_name, bool secure,
+      v8::Handle<v8::Object> require, void* handle, int* argc, char*** argv);
+
+  virtual ~SoModule();
+
+  virtual bool Load();
+
+private:
+  void* handle_;
+  int* argc_;
+  char*** argv_;
+  bool loaded_;
+};
+
+#endif // V8_COMMONJS_SO_MODULE_H
 
 // vim: tabstop=2:sw=2:expandtab

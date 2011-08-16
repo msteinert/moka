@@ -45,14 +45,14 @@ class ScriptModule;
 /**
  * A CommonJS 1.1 script module
  */
-class commonjs::internal::ScriptModule: public commonjs::internal::Module {
+class commonjs::internal::ScriptModule: public commonjs::Module {
 public:
   ScriptModule(const char* id, const char* file_name, bool secure,
       v8::Handle<v8::Object> require, FILE* file, size_t size);
 
   virtual ~ScriptModule();
 
-  virtual v8::Handle<v8::Value> Load();
+  virtual bool Load();
 
 private:
   FILE* file_;

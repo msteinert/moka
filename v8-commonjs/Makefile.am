@@ -10,7 +10,9 @@ libv8_commonjs_la_SOURCES = \
 	module-factory.h \
 	module-loader.cc \
 	script-module.cc \
-	script-module.h
+	script-module.h \
+	so-module.cc \
+	so-module.h
 # include directories & compiler switches
 libv8_commonjs_la_CPPFLAGS = \
 	-DLIBDIR=\"$(libdir)\" \
@@ -21,4 +23,5 @@ libv8_commonjs_la_LDFLAGS = \
 pkgincludedir = $(includedir)/v8-commonjs
 pkginclude_HEADERS = \
 	commonjs.h \
+	macros.h \
 	module-loader.h

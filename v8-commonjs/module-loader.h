@@ -38,15 +38,15 @@ namespace commonjs {
 
 class ModuleLoader;
 
-namespace internal {
-
 class Module;
+
+namespace internal {
 
 class ModuleFactory;
 
 } // namespace internal
 
-typedef std::tr1::shared_ptr<internal::Module> ModulePointer;
+typedef std::tr1::shared_ptr<Module> ModulePointer;
 
 typedef std::tr1::shared_ptr<internal::ModuleFactory> ModuleFactoryPointer;
 
@@ -86,8 +86,6 @@ private: // private data
   bool initialized_;
   bool secure_;
   v8::Handle<v8::Context> context_;
-  int *argc_;
-  char ***argv_;
   v8::Persistent<v8::Object> require_;
   v8::Persistent<v8::Array> paths_;
   ModuleFactoryPointer module_factory_;

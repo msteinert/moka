@@ -33,18 +33,22 @@
 
 namespace commonjs {
 
-namespace internal {
-
 class Module;
 
-} // namespace internal
+typedef bool (*InitializeCallback)(Module module, int* argc, char*** argv);
+
+struct module {
+  int version_major;
+  int version_minor;
+  InitializeCallback initialize;
+};
 
 } // namespace commonjs
 
 /**
  * A CommonJS 1.1 module
  */
-class commonjs::internal::Module {
+class commonjs::Module {
 public:
   Module(const char* id, const char* file_name, bool secure,
       v8::Handle<v8::Object> require, v8::Handle<v8::Context> context);
@@ -56,8 +60,8 @@ public:
 
   bool Initialize();
 
-  virtual v8::Handle<v8::Value> Load() {
-    return GetExports();
+  virtual bool Load() {
+    return true;
   }
 
   const char* GetFileName() const {
@@ -76,6 +80,25 @@ public:
 
   const v8::Handle<v8::Object> GetExports() const {
     return exports_;
+  }
+
+  const v8::Handle<v8::Value> GetException() const {
+    return exception_;
+  }
+
+  void SetException(const char* exception) {
+    if (!exception_.IsEmpty()) {
+      exception_.Dispose();
+    }
+    exception_ = v8::Persistent<v8::Value>::New(
+        v8::Exception::Error(v8::String::New(exception)));
+  }
+
+  void SetException(v8::Handle<v8::Value> exception) {
+    if (!exception_.IsEmpty()) {
+      exception_.Dispose();
+    }
+    exception_ = v8::Persistent<v8::Value>::New(exception);
   }
 
 private: // non-copyable
@@ -97,8 +120,21 @@ private: // private data
   v8::Persistent<v8::Object> require_;
   v8::Persistent<v8::Object> exports_;
   v8::Persistent<v8::Object> module_;
-  void* handle_;
+  v8::Persistent<v8::Value> exception_;
 };
+
+#define COMMONJS_MODULE_VERSION_MAJOR (1)
+
+#define COMMONJS_MODULE_VERSION_MINOR (1)
+
+#define COMMONJS_MODULE(initialize) \
+extern "C" { \
+  commonjs::module commonjs_initialize = { \
+    COMMONJS_MODULE_VERSION_MAJOR, \
+    COMMONJS_MODULE_VERSION_MINOR, \
+    initialize, \
+  }; \
+}
 
 #endif // V8_COMMONJS_MODULE_H
 

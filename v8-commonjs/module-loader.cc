@@ -59,21 +59,28 @@ bool ModuleLoader::Initialize(const char* file_name) {
 }
 
 static char* NewId(const char* file_name) {
-  char* file_name_copy = static_cast<char*>(malloc(strlen(file_name) + 1));
+  char* file_name_copy = static_cast<char*>(::malloc(strlen(file_name) + 1));
   if (!file_name_copy) {
     return NULL;
   }
+  strcpy(file_name_copy, file_name);
   char* base_name = ::basename(file_name_copy);
   if (!base_name) {
     ::free(file_name_copy);
     return NULL;
   }
   char* dot = strchr(base_name, '.');
-  if (!dot) {
-    return base_name;
+  if (dot) {
+    *dot = '\0';
   }
-  *dot = '\0';
-  return base_name;
+  char *base_name_copy = static_cast<char*>(::malloc(strlen(base_name) + 1));
+  if (!base_name_copy) {
+    ::free(file_name_copy);
+    return NULL;
+  }
+  strcpy(base_name_copy, base_name);
+  ::free(file_name_copy);
+  return base_name_copy;
 }
 
 bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
@@ -86,8 +93,6 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
     error_.assign("No currently entered context");
     return false;
   }
-  argc_ = argc;
-  argv_ = argv;
   // Create 'require' object
   v8::Handle<v8::ObjectTemplate> require_templ = v8::ObjectTemplate::New();
   require_templ->SetInternalFieldCount(1);
@@ -138,11 +143,11 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
   internal::ModulePointer module;
   char* id = NewId(resolved_path);
   if (id) {
-    module.reset(new internal::Module(id, resolved_path, secure_, require_,
+    module.reset(new Module(id, resolved_path, secure_, require_,
           context_));
     ::free(id);
   } else {
-    module.reset(new internal::Module(".", resolved_path, secure_, require_,
+    module.reset(new Module(".", resolved_path, secure_, require_,
           context_));
   }
   if (!module.get()) {
@@ -154,7 +159,8 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
     return false;
   }
   module_stack_.push(module);
-  module_factory_.reset(new internal::ModuleFactory(secure_, require_, module));
+  module_factory_.reset(new internal::ModuleFactory(secure_, require_, module,
+        argc, argv));
   if (!module_factory_.get()) {
     error_.assign("No Memory");
     return false;
@@ -203,13 +209,17 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
         }
         if (path_value->IsString()) {
           ModulePointer module = module_loader->module_factory_->NewModule(
-              id.c_str(), *v8::String::Utf8Value(path_value),
-              module_loader->argc_, module_loader->argv_);
+              id.c_str(), *v8::String::Utf8Value(path_value));
           if (module.get()) {
             module_loader->module_stack_.push(module);
-            v8::Handle<v8::Value> value = module->Load();
-            module_loader->module_stack_.pop();
-            return handle_scope.Close(value);
+            if (module->Load()) {
+              module_loader->module_stack_.pop();
+              return handle_scope.Close(module->GetExports());
+            } else {
+              module_loader->module_factory_->RemoveModule(module);
+              module_loader->module_stack_.pop();
+              return handle_scope.Close(module->GetException());
+            }
           }
         }
       }
@@ -227,13 +237,17 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
               v8::String::New("No memory")));
       }
       ModulePointer module = module_loader->module_factory_->NewModule(
-          id.c_str(), directory_name, module_loader->argc_,
-          module_loader->argv_);
+          id.c_str(), directory_name);
       if (module.get()) {
         module_loader->module_stack_.push(module);
-        v8::Handle<v8::Value> value = module->Load();
-        module_loader->module_stack_.pop();
-        return handle_scope.Close(value);
+        if (module->Load()) {
+          module_loader->module_stack_.pop();
+          return handle_scope.Close(module->GetExports());
+        } else {
+          module_loader->module_factory_->RemoveModule(module);
+          module_loader->module_stack_.pop();
+          return handle_scope.Close(module->GetException());
+        }
       }
     }
   }
