@@ -25,6 +25,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * \brief The module factory is used by the module loader to load new modules
+ */
+
 #ifndef V8_COMMONJS_MODULE_FACTORY_H
 #define V8_COMMONJS_MODULE_FACTORY_H
 
@@ -49,22 +53,72 @@ typedef std::map<std::string, ModulePointer> ModuleMap;
 
 } // namespace commonjs
 
-/**
- * A CommonJS 1.1 module factory
- */
+/// \brief The V8-CommonJS module factory
 class commonjs::internal::ModuleFactory {
 public:
+  /**
+   * \brief Construct a module factory
+   *
+   * \param secure [in] Indicates if this should be a secure module loader
+   * \param require [in] The object implementing the 'require' function
+   * \param module [in] The main module object
+   * \param argc [in] A pointer to the application argument count
+   * \param argc [in] A pointer to the application argument vector
+   */
   ModuleFactory(bool secure, v8::Handle<v8::Object> require,
       ModulePointer module, int* argc, char*** argv);
 
+  /// \brief Default destructor
   ~ModuleFactory() {}
 
+  /**
+   * \brief Construct a new module
+   *
+   * \param id [in] The ID of the module to be constructed
+   * \param path [in] The path to search in for the module
+   *
+   * \return If the module was found, this function returns a pointer
+   *         to the new module. If the module was not found NULL is
+   *         returned. The return value can be checked with
+   *         std::tr1::shared_ptr::get().
+   */
   ModulePointer NewModule(const char* id, const char* path);
 
+  /**
+   * \brief Construct a new module from JavaScript
+   *
+   * \param id [in] The ID of the module to be constructed
+   * \param path [in] The path to search in for the module
+   *
+   * \return If the module was found, this function returns a pointer
+   *         to the new module. If the module was not found NULL is
+   *         returned. The return value can be checked with
+   *         std::tr1::shared_ptr::get().
+   */
   ModulePointer NewScriptModule(const char* id, const char* path);
 
+  /**
+   * \brief Construct a new module from a shared library
+   *
+   * \param id [in] The ID of the module to be constructed
+   * \param path [in] The path to search in for the module
+   *
+   * \return If the module was found, this function returns a pointer
+   *         to the new module. If the module was not found NULL is
+   *         returned. The return value can be checked with
+   *         std::tr1::shared_ptr::get().
+   */
   ModulePointer NewSoModule(const char* id, const char* path);
 
+  /**
+   * \brief Remove a module from the module store
+   *
+   * Modules are cached by the module factory when they are created. If a
+   * module fails to load after it has been created it can be removed from
+   * the store by calling this function.
+   *
+   * \param module [in] The module to be removed from the module store
+   */
   void RemoveModule(ModulePointer module) {
     if (!module.get()) {
       return;

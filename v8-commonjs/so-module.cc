@@ -25,6 +25,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/// \brief Implements the API found in v8-commonjs/so-module.h
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -52,43 +54,68 @@ SoModule::~SoModule() {
 
 bool SoModule::Load() {
   v8::HandleScope handle_scope;
-  if (!Initialize()) {
-    SetException("Module initialization failed");
-    return false;
-  }
   if (loaded_) {
+    // Already loaded
     return true;
   }
+  if (!Initialize()) {
+    // Initialize the base module
+    std::string message("Failed to initialize module ");
+    message.append(GetId());
+    SetException(message);
+    return false;
+  }
+  // Verify the shared object handle is valid
   if (!handle_) {
-    SetException("Shared object handle is NULL");
+    std::string message("Shared object handle is NULL for module ");
+    message.append(GetId());
+    SetException(message);
     return false;
   }
+  // Resolve the symbol for the initialization structure
   const struct module* init =
-    static_cast<const struct module*>(::dlsym(handle_, "commonjs_initialize"));
+    static_cast<const struct module*>(::dlsym(handle_, "commonjs_module__"));
   if (!init) {
-    SetException(dlerror());
+    std::string message("Loading module ");
+    message.append(GetId());
+    message.append(": ");
+    message.append(dlerror());
+    SetException(message);
     return false;
   }
+  // Check the major version number, must be equal
   if (init->version_major != COMMONJS_MODULE_VERSION_MAJOR) {
-    SetException("Module major version must match");
+    std::string message("Major version must match for module ");
+    message.append(GetId());
+    SetException(message);
     return false;
   }
+  // Check the minor version number, must be equal or greater
   if (init->version_minor < COMMONJS_MODULE_VERSION_MINOR) {
-    SetException("Module minor version not supported");
+    std::string message("Minor version not supported for module ");
+    message.append(GetId());
+    SetException(message);
     return false;
   }
+  // Enter the context for this module
   v8::Context::Scope scope(GetContext());
   if (!init->initialize) {
-    SetException("Module initialization function is NULL");
+    std::string message("Initialize function is NULL for module ");
+    message.append(GetId());
+    SetException(message);
     return false;
   }
+  // Call the module initialization function passing a reference to this module
   if (!init->initialize(*this, argc_, argv_)) {
     v8::Handle<v8::Value> exception = GetException();
     if (exception.IsEmpty()) {
-      SetException("Module initialization failed");
+      std::string message("Failed to initialize module ");
+      message.append(GetId());
+      SetException(message);
     }
     return false;
   }
+  loaded_ = true;
   return true;
 }
 

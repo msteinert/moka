@@ -25,6 +25,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/// \brief Implements the API found in v8-commonjs/module.h
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -62,7 +64,6 @@ Module::Module(const char* id, const char* file_name, bool secure,
 Module::~Module() {
   if (directory_name_) {
     ::free(directory_name_);
-    directory_name_ = NULL;
   }
   module_.Dispose();
   exports_.Dispose();
@@ -127,17 +128,20 @@ v8::Handle<v8::Value> Module::Print(const v8::Arguments& args) {
 
 const char* Module::GetDirectoryName() {
   if (!directory_name_) {
+    // Copy the file name for the call to dirname
     char* file_name = static_cast<char*>(
         ::malloc(strlen(file_name_.c_str()) + 1));
     if (!file_name) {
       return NULL;
     }
     strcpy(file_name, file_name_.c_str());
+    // Get the directory name
     char* directory_name = ::dirname(file_name);
     if (!directory_name) {
       ::free(file_name);
       return NULL;
     }
+    // Copy the directory name to its permanent location
     directory_name_ = static_cast<char*>(::malloc(strlen(directory_name) + 1));
     ::strcpy(directory_name_, directory_name);
     ::free(file_name);

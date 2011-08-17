@@ -25,6 +25,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/// \brief Implements the API found in v8-commonjs/module-factory.h
+
 #include <cstdlib>
 #include <dlfcn.h>
 #include <sys/stat.h>
@@ -44,77 +46,94 @@ ModuleFactory::ModuleFactory(bool secure, v8::Handle<v8::Object> require,
   , require_(require)
   , argc_(argc)
   , argv_(argv) {
+  // Insert the main module into the module store
   modules_.insert(ModulePair(module->GetFileName(), module));
 }
 
 ModulePointer ModuleFactory::NewScriptModule(const char* id, const char* path) {
   ModulePointer module;
+  // Construct a full script filename
   std::string file_name(path);
   file_name.append("/");
   file_name.append(id);
   file_name.append(".js");
+  // Resolve links/relative references
   if (!realpath(file_name.c_str(), resolved_path_)) {
     return module;
   }
+  // Check for a previously loaded module
   ModuleMap::iterator iter = modules_.find(resolved_path_);
   if (modules_.end() != iter) {
     return (*iter).second;
   }
+  // Open the script
   FILE* file = ::fopen(resolved_path_, "rb");
   if (!file) {
     return module;
   }
+  // Get file statistics
   struct stat buf;
   if (::fstat(fileno(file), &buf)) {
     ::fclose(file);
     return module;
   }
+  // Ensure this file is a regular file, i.e., not a directory
   if (!S_ISREG(buf.st_mode)) {
     ::fclose(file);
     return module;
   }
+  // Create a new script module
   module.reset(new ScriptModule(id, resolved_path_, secure_, require_, file,
         buf.st_size));
   if (!module.get()) {
     ::fclose(file);
     return module;
   }
+  // Insert the module into the module store
   modules_.insert(ModulePair(module->GetFileName(), module));
   return module;
 }
 
 ModulePointer ModuleFactory::NewSoModule(const char* id, const char* path) {
   ModulePointer module;
+  // Construct a shared object name
   std::string file_name(path);
   file_name.append("/");
   file_name.append(id);
   file_name.append(".so");
+  // Resolve links/relative references
   if (!realpath(file_name.c_str(), resolved_path_)) {
     return module;
   }
+  // Check for a previously loaded module
   ModuleMap::iterator iter = modules_.find(resolved_path_);
   if (modules_.end() != iter) {
     return (*iter).second;
   }
+  // Invoke the dynamic linker to open the shared object
   void* handle = ::dlopen(file_name.c_str(), RTLD_LAZY);
   if (!handle) {
     return module;
   }
+  // Create a new shared object module
   module.reset(new SoModule(id, resolved_path_, secure_, require_, handle,
         argc_, argv_));
   if (!module.get()) {
     ::dlclose(handle);
     return module;
   }
+  // Insert the module into the module store
   modules_.insert(ModulePair(module->GetFileName(), module));
   return module;
 }
 
 ModulePointer ModuleFactory::NewModule(const char* id, const char* path) {
+  // Try to load a script module
   ModulePointer module = NewScriptModule(id, path);
   if (module.get()) {
     return module;
   }
+  // Try to load a shared object module
   module = NewSoModule(id, path);
   if (module.get()) {
     return module;

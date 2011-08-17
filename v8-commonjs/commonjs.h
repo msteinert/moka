@@ -25,10 +25,26 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * \file
+ * \brief The V8-CommonJS API
+ *
+ * \mainpage V8-CommonJS API Reference
+ *
+ * V8-CommonJS is an implementation of the CommonJS specification in C++
+ * for Google's V8 JavaScript engine. This API is meant to be used by
+ * embedder's of the V8 API.
+ *
+ * For more information and source code see https://github.com/msteinert/v8-commonjs
+ */
+
 #ifndef V8_COMMONJS_H
 #define V8_COMMONJS_H
 
+// Include the module API
 #include <v8-commonjs/module.h>
+
+// Include the module loader API
 #include <v8-commonjs/module-loader.h>
 
 #endif // V8_COMMONJS_H

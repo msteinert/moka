@@ -25,6 +25,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * \brief A CommonJS JavaScript source code module
+ */
+
 #ifndef V8_COMMONJS_SCRIPT_MODULE_H
 #define V8_COMMONJS_SCRIPT_MODULE_H
 
@@ -42,21 +46,39 @@ class ScriptModule;
 
 } // namespace commonjs
 
-/**
- * A CommonJS 1.1 script module
- */
+/// \brief A CommonJS script module
 class commonjs::internal::ScriptModule: public commonjs::Module {
 public:
+  /**
+   * \brief Construct a module from JavaScript source code
+   *
+   * \param id [in] The ID of the new module
+   * \param file_name [in] The absolute path of the file containing the module
+   * \param secure [in] Indicates if this should be a secure module
+   * \param require [in] The object implementing the 'require' function
+   * \param file [in] An open file handle (this object will own @file)
+   * \param size [in] The size of @file in bytes
+   */
   ScriptModule(const char* id, const char* file_name, bool secure,
       v8::Handle<v8::Object> require, FILE* file, size_t size);
 
+  /// \brief Destructor
   virtual ~ScriptModule();
 
+  /**
+   * \brief Load a JavaScript source code module
+   *
+   * This function reads JavaScript from a file handle and then attempts
+   * to compile and run the script.
+   *
+   * \return This function returns @true if successful, @false otherwise.
+   */
   virtual bool Load();
 
 private:
   FILE* file_;
   size_t size_;
+  bool loaded_;
 };
 
 #endif // V8_COMMONJS_SCRIPT_MODULE_H

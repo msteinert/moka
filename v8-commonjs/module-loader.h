@@ -25,6 +25,11 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * \file
+ * \brief Interface to the module loader
+ */
+
 #ifndef V8_COMMONJS_MODULE_LOADER_H
 #define V8_COMMONJS_MODULE_LOADER_H
 
@@ -54,23 +59,63 @@ typedef std::stack<ModulePointer> ModuleStack;
 
 } // namespace commonjs
 
-/**
- * A CommonJS 1.1 module loader
- */
+/// A CommonJS 1.1 module loader
 class COMMONJSEXPORT commonjs::ModuleLoader {
 public:
+  /**
+   * \brief Construct a new module loader
+   */
   ModuleLoader();
 
+  /**
+   * \brief Construct a new module loader
+   *
+   * \param secure [in] Indicates if this should be a secure module loader.
+   */
   ModuleLoader(bool secure);
 
+  /// \brief Default destructor
   ~ModuleLoader();
 
+  /**
+   * \brief Get an error message after an initialization failure.
+   *
+   * If the the initialization function fails, call this function to get
+   * more detail about the failure.
+   *
+   * \return A detailed error message.
+   */
   const char* GetError() const {
     return error_.c_str();
   }
 
+  /**
+   * \brief Initialize the module loader.
+   *
+   * If the module loader is initialized with this function shared object
+   * modules will not receive command line arguments.
+   *
+   * \param file_name [in] The main program script file name
+   *
+   * \return This function returns @true if the module loader was
+   *         successfully initialized, @false otherwise.
+   */
   bool Initialize(const char* file_name);
 
+  /**
+   * \brief Initialize the module loader.
+   *
+   * If the module loader is initialized with this function command line
+   * arguments will be passed to shared object modules. Shared object
+   * modules may modify the contents of the command line vector.
+   *
+   * \param file_name [in] The main program script file name
+   * \param argc [in/out] A pointer to the command line argument count
+   * \param argv [in/out] A pointer to the command line argument vector
+   *
+   * \return This function returns @true if the module loader was
+   *         successfully initialized, @false otherwise.
+   */
   bool Initialize(const char* file_name, int* argc, char*** argv);
 
 private: // non-copyable

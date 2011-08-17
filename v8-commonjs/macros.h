@@ -25,10 +25,15 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * \brief Internally used macros
+ */
+
 #ifndef V8_COMMONJS_MACROS_H
 #define V8_COMMONJS_MACROS_H
 
 #if defined(__GNUC__) && (__GNUC__ >= 4)
+/// \brief Control symbol visibility
 #define COMMONJSEXPORT __attribute__ ((visibility("default")))
 #else
 #define COMMONJSEXPORT

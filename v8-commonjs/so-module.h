@@ -25,6 +25,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+/**
+ * \brief A shared object module
+ */
+
 #ifndef V8_COMMONJS_SO_MODULE_H
 #define V8_COMMONJS_SO_MODULE_H
 
@@ -41,16 +45,35 @@ class SoModule;
 
 } // namespace commonjs
 
-/**
- * A CommonJS 1.1 shared-object module
- */
+/// \brief A CommonJS shared object module
 class commonjs::internal::SoModule: public commonjs::Module {
 public:
+  /**
+   * \brief Construct a module from JavaScript source code
+   *
+   * \param id [in] The ID of the new module
+   * \param file_name [in] The absolute path of the file containing the module
+   * \param secure [in] Indicates if this should be a secure module
+   * \param require [in] The object implementing the 'require' function
+   * \param handle [in] A shared object handle returned by dlopen()
+   * \param argc [in/out] A pointer to the command line argument count
+   * \param argv [in/out] A pointer to the command line argument vector
+   */
   SoModule(const char* id, const char* file_name, bool secure,
       v8::Handle<v8::Object> require, void* handle, int* argc, char*** argv);
 
+  /// \brief Destructor
   virtual ~SoModule();
 
+  /**
+   * \brief Load a shared object module
+   *
+   * This function attempts to load the commonjs_module__ structure and
+   * initialize the module by calling its commonjs::Module::InitializeCallback
+   * function.
+   *
+   * \return This function returns @true if successful, @false otherwise.
+   */
   virtual bool Load();
 
 private:
