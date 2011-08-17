@@ -30,12 +30,13 @@
 
 #include <string>
 #include <v8.h>
+#include <v8-commonjs/macros.h>
 
 namespace commonjs {
 
 class Module;
 
-typedef bool (*InitializeCallback)(Module module, int* argc, char*** argv);
+typedef bool (*InitializeCallback)(Module& module, int* argc, char*** argv);
 
 struct module {
   int version_major;
@@ -48,7 +49,7 @@ struct module {
 /**
  * A CommonJS 1.1 module
  */
-class commonjs::Module {
+class COMMONJSEXPORT commonjs::Module {
 public:
   Module(const char* id, const char* file_name, bool secure,
       v8::Handle<v8::Object> require, v8::Handle<v8::Context> context);
@@ -129,7 +130,7 @@ private: // private data
 
 #define COMMONJS_MODULE(initialize) \
 extern "C" { \
-  commonjs::module commonjs_initialize = { \
+  commonjs::module COMMONJSEXPORT commonjs_initialize = { \
     COMMONJS_MODULE_VERSION_MAJOR, \
     COMMONJS_MODULE_VERSION_MINOR, \
     initialize, \

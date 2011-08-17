@@ -140,7 +140,7 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
     error_.assign(error);
     return false;
   }
-  internal::ModulePointer module;
+  ModulePointer module;
   char* id = NewId(resolved_path);
   if (id) {
     module.reset(new Module(id, resolved_path, secure_, require_,
@@ -191,40 +191,27 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
     return handle_scope.Close(v8::ThrowException(
           v8::String::New("Module loader is not initialized")));
   }
+  ModulePointer module;
   if ('.' != id[0]) {
     v8::Local<v8::Array> properties = module_loader->paths_->GetPropertyNames();
     if (!properties.IsEmpty()) {
-      uint32_t index = 0;
-      while (index < properties->Length()) {
+      uint32_t index = 0, length = properties->Length();
+      while ((index < length) && !module.get()) {
         v8::Local<v8::Value> index_value = properties->Get(index++);
-        if (!index_value->IsUint32()) {
-          return handle_scope.Close(v8::ThrowException(
-                v8::String::New("Index error")));
-        }
-        v8::Local<v8::Value> path_value =
-          module_loader->paths_->Get(index_value->Uint32Value());
-        if (path_value.IsEmpty()) {
-          return handle_scope.Close(v8::ThrowException(
-                v8::String::New("Index error")));
-        }
-        if (path_value->IsString()) {
-          ModulePointer module = module_loader->module_factory_->NewModule(
-              id.c_str(), *v8::String::Utf8Value(path_value));
-          if (module.get()) {
-            module_loader->module_stack_.push(module);
-            if (module->Load()) {
-              module_loader->module_stack_.pop();
-              return handle_scope.Close(module->GetExports());
-            } else {
-              module_loader->module_factory_->RemoveModule(module);
-              module_loader->module_stack_.pop();
-              return handle_scope.Close(module->GetException());
+        if (index_value->IsUint32()) {
+          v8::Local<v8::Value> path_value =
+            module_loader->paths_->Get(index_value->Uint32Value());
+          if (!path_value.IsEmpty()) {
+            if (path_value->IsString()) {
+              module = module_loader->module_factory_->NewModule(id.c_str(),
+                  *v8::String::Utf8Value(path_value));
             }
           }
         }
       }
     }
   } else {
+    // Relative load
     if (!module_loader->secure_) {
       ModulePointer previous_module = module_loader->module_stack_.top();
       if (!previous_module.get()) {
@@ -236,18 +223,27 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
         return handle_scope.Close(v8::ThrowException(
               v8::String::New("No memory")));
       }
-      ModulePointer module = module_loader->module_factory_->NewModule(
-          id.c_str(), directory_name);
-      if (module.get()) {
-        module_loader->module_stack_.push(module);
-        if (module->Load()) {
-          module_loader->module_stack_.pop();
-          return handle_scope.Close(module->GetExports());
-        } else {
-          module_loader->module_factory_->RemoveModule(module);
-          module_loader->module_stack_.pop();
-          return handle_scope.Close(module->GetException());
-        }
+      module = module_loader->module_factory_->NewModule(id.c_str(),
+          directory_name);
+
+    }
+  }
+  if (module.get()) {
+    module_loader->module_stack_.push(module);
+    bool status = module->Load();
+    module_loader->module_stack_.pop();
+    if (status) {
+      return handle_scope.Close(module->GetExports());
+    } else {
+      module_loader->module_factory_->RemoveModule(module);
+      v8::Handle<v8::Value> exception = module->GetException();
+      if (exception.IsEmpty()) {
+        std::string error("Failed to load module ");
+        error.append(id);
+        return handle_scope.Close(v8::ThrowException(
+              v8::String::New(error.c_str())));
+      } else {
+        return handle_scope.Close(v8::ThrowException(exception));
       }
     }
   }

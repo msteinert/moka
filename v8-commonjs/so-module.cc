@@ -29,9 +29,6 @@
 #include "config.h"
 #endif
 
-#include <cerrno>
-#include <cstdlib>
-#include <cstring>
 #include <dlfcn.h>
 #include <v8-commonjs/so-module.h>
 
@@ -69,9 +66,7 @@ bool SoModule::Load() {
   const struct module* init =
     static_cast<const struct module*>(::dlsym(handle_, "commonjs_initialize"));
   if (!init) {
-    char error[BUFSIZ];
-    ::strerror_r(errno, error, BUFSIZ);
-    SetException(error);
+    SetException(dlerror());
     return false;
   }
   if (init->version_major != COMMONJS_MODULE_VERSION_MAJOR) {
@@ -83,6 +78,17 @@ bool SoModule::Load() {
     return false;
   }
   v8::Context::Scope scope(GetContext());
+  if (!init->initialize) {
+    SetException("Module initialization function is NULL");
+    return false;
+  }
+  if (!init->initialize(*this, argc_, argv_)) {
+    v8::Handle<v8::Value> exception = GetException();
+    if (exception.IsEmpty()) {
+      SetException("Module initialization failed");
+    }
+    return false;
+  }
   return true;
 }
 

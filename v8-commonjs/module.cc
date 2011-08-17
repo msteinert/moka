@@ -112,8 +112,8 @@ bool Module::Initialize() {
 }
 
 v8::Handle<v8::Value> Module::Print(const v8::Arguments& args) {
+  v8::HandleScope handle_scope;
   for (int i = 0; i < args.Length(); ++i) {
-    v8::HandleScope handle_scope;
     if (i != 0) {
       ::fputc(' ', stdout);
     }
@@ -122,7 +122,7 @@ v8::Handle<v8::Value> Module::Print(const v8::Arguments& args) {
   }
   ::fputc('\n', stdout);
   ::fflush(stdout);
-  return v8::Undefined();
+  return handle_scope.Close(v8::Handle<v8::Value>());
 }
 
 const char* Module::GetDirectoryName() {

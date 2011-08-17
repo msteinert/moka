@@ -29,17 +29,23 @@
 #include "config.h"
 #endif
 
+#include <cstdio>
 #include "v8-commonjs/module.h"
 
-static bool foo_initialize(commonjs::Module module,
+static v8::Handle<v8::Value> SayHi(const v8::Arguments& /* args */) {
+  v8::HandleScope handle_scope;
+  ::printf("Foo says hello!\n");
+  return v8::Handle<v8::Value>();
+}
+
+static bool foo_initialize(commonjs::Module& module,
     int* /* argc */, char*** /* argv */)
 {
   v8::HandleScope handle_scope;
   v8::Handle<v8::Object> exports = module.GetExports();
-  if (exports.IsEmpty()) {
-    module.SetException("Exports is NULL");
-    return false;
-  }
+  v8::Local<v8::FunctionTemplate> say_hi_templ =
+    v8::FunctionTemplate::New(SayHi);
+  exports->Set(v8::String::New("sayHi"), say_hi_templ->GetFunction());
   return true;
 }
 
