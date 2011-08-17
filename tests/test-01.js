@@ -9,7 +9,9 @@ print("module.uri: " + module.uri);
 print("exports: " + exports);
 try {
 	foo = require('foo');
-	foo.sayHi();
+	bar = require('bar');
 } catch(error) {
 	print(error);
 }
+foo.sayHi();
+bar.sayHi();

@@ -5,7 +5,6 @@
 lib_LTLIBRARIES = libv8-commonjs.la
 libv8_commonjs_la_SOURCES = \
 	module.cc \
-	module.h \
 	module-factory.cc \
 	module-factory.h \
 	module-loader.cc \
@@ -24,4 +23,5 @@ pkgincludedir = $(includedir)/v8-commonjs
 pkginclude_HEADERS = \
 	commonjs.h \
 	macros.h \
+	module.h \
 	module-loader.h

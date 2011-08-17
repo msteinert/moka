@@ -18,7 +18,7 @@ AC_INIT([V8-CommonJS], [major_version.minor_version.micro_version],
 	[http://github.com/msteinert/v8-commonjs/issues/], [v8-commonjs],
 	[http://msteinert.github.com/v8-commonjs/])
 AC_CONFIG_MACRO_DIR([m4])
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects foreign])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([v8-commonjs/commonjs.h])
 # Initialize Libtool
