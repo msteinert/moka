@@ -56,8 +56,8 @@ public:
    * \param file_name [in] The absolute path of the file containing the module
    * \param secure [in] Indicates if this should be a secure module
    * \param require [in] The object implementing the 'require' function
-   * \param file [in] An open file handle (this object will own @file)
-   * \param size [in] The size of @file in bytes
+   * \param file [in] An open file handle (this object will own file)
+   * \param size [in] The size of file in bytes
    */
   ScriptModule(const char* id, const char* file_name, bool secure,
       v8::Handle<v8::Object> require, FILE* file, size_t size);
@@ -71,7 +71,7 @@ public:
    * This function reads JavaScript from a file handle and then attempts
    * to compile and run the script.
    *
-   * \return This function returns @true if successful, @false otherwise.
+   * \return This function returns true if successful, false otherwise.
    */
   virtual bool Load();
 

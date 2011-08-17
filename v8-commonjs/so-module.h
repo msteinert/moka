@@ -72,7 +72,7 @@ public:
    * initialize the module by calling its commonjs::Module::InitializeCallback
    * function.
    *
-   * \return This function returns @true if successful, @false otherwise.
+   * \return This function returns true if successful, false otherwise.
    */
   virtual bool Load();
 

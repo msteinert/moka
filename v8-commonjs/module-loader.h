@@ -97,8 +97,8 @@ public:
    *
    * \param file_name [in] The main program script file name
    *
-   * \return This function returns @true if the module loader was
-   *         successfully initialized, @false otherwise.
+   * \return This function returns true if the module loader was
+   *         successfully initialized, false otherwise.
    */
   bool Initialize(const char* file_name);
 
@@ -113,8 +113,8 @@ public:
    * \param argc [in/out] A pointer to the command line argument count
    * \param argv [in/out] A pointer to the command line argument vector
    *
-   * \return This function returns @true if the module loader was
-   *         successfully initialized, @false otherwise.
+   * \return This function returns true if the module loader was
+   *         successfully initialized, false otherwise.
    */
   bool Initialize(const char* file_name, int* argc, char*** argv);
 

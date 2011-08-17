@@ -46,11 +46,11 @@ class Module;
  *
  * The module loader will call this initialization function during the
  * shared module loading process. This function should add new objects
- * the exports for the @module. Exports can be retrieved by calling the
+ * the exports for the module. Exports can be retrieved by calling the
  * function commonjs::Module::GetExports().
  *
  * If any errors occur during the module initialization, the module should
- * return @false and optionally set an exception by calling
+ * return false and optionally set an exception by calling
  * commonjs::Module::SetException(). If no exception is set then a generic
  * exception will be returned to JavaScript.
  *
@@ -58,10 +58,10 @@ class Module;
  * \param argc [in/out] A pointer to application argument count
  * \param argv [in/out] A pointer to the application argument vector
  *
- * \return This function should return @true if the module was successfully
- *         initialized. If this function returns success the module's exports
- *         will be returned to JavaScript. If the module couldnot be
- *         initialized this function should return @false.
+ * \return This function should return true if the module was successfully
+ *         initialized. If this function returns successfully the module's
+ *         exports will be returned to JavaScript. If the module could not
+ *         be initialized this function should return false.
  */
 typedef bool (*InitializeCallback)(Module& module, int* argc, char*** argv);
 
@@ -126,8 +126,8 @@ public:
    *
    * All modules must be successfully initialized before being loaded.
    *
-   * \return This function returns @true if the initialization was
-   *         successful, @false otherwise.
+   * \return This function returns true if the initialization was
+   *         successful, false otherwise.
    */
   bool Initialize();
 
@@ -136,8 +136,8 @@ public:
    *
    * This function evaluates any require code and initializes module exports.
    *
-   * \return This function returns @true if the module was successfully
-   *         loaded, @false otherwise.
+   * \return This function returns true if the module was successfully
+   *         loaded, false otherwise.
    */
   virtual bool Load() {
     return true;
