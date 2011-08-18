@@ -47,15 +47,25 @@ class Args;
 
 class commonjs::File {
 public:
+  File();
+
   File(FILE* file);
 
   ~File();
+
+  const char* GetMessage() const {
+    return message_.c_str();
+  }
+
+  bool Open(const char* filename, const char* mode);
 
   void Close();
 
   void Flush();
 
   void SetError();
+
+  void SetError(const char* message);
 
   bool CheckError();
 
@@ -65,9 +75,14 @@ public:
 
   void Print(v8::Handle<v8::Value> value);
 
+  void Println(v8::Handle<v8::Value> value);
+
+  void Write(v8::Handle<v8::Value> value);
+
 private:
   FILE* file_;
   int error_;
+  std::string message_;
 };
 
 class commonjs::PrintStream {
@@ -86,6 +101,10 @@ private:
   static v8::Handle<v8::Value> CheckError(const v8::Arguments& arguments);
 
   static v8::Handle<v8::Value> Print(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Println(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Write(const v8::Arguments& arguments);
 };
 
 class commonjs::Stdout: public commonjs::PrintStream {

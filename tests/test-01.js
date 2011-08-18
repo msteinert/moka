@@ -1,5 +1,5 @@
 system = require('system');
 var f = function() { 
-	system.stdout.print('Hello, World!\n');
+	system.stdout.println('Hello, World!');
 }
 f();
