@@ -1,17 +1,5 @@
-print("require: " + require);
-print("require.paths: " + require.paths);
-print("require.main: " + require.main);
-print("require.main.id: " + require.main.id);
-print("require.main.uri: " + require.main.uri);
-print("module: " + module);
-print("module.id: " + module.id);
-print("module.uri: " + module.uri);
-print("exports: " + exports);
-try {
-	foo = require('foo');
-	bar = require('bar');
-} catch(error) {
-	print(error);
+system = require('system');
+var f = function() { 
+	system.stdout.print('Hello, World!\n');
 }
-foo.sayHi();
-bar.sayHi();
+f();

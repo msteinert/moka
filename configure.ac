@@ -64,9 +64,6 @@ AC_SUBST([moduledir])
 # Check for V8
 AC_CHECK_HEADERS([v8.h],,
 	[AC_MSG_ERROR([V8 is required to compile $PACKAGE_NAME])])
-# Check for dlopen
-AC_SEARCH_LIBS([dlopen], [dl],,
-	[AC_MSG_ERROR([dlopen is required to compile $PACKAGE_NAME])])
 # Output files
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([

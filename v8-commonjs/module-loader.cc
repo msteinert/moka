@@ -272,35 +272,34 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
           directory_name);
     }
   }
-  if (module.get()) {
-    // The requested module was found, store it on the module stack
-    module_loader->module_stack_.push(module);
-    // Attempt to load the module
-    bool status = module->Load();
-    // Pop the module off the module stack
-    module_loader->module_stack_.pop();
-    if (status) {
-      // Successfully loaded, return exports
-      return handle_scope.Close(module->GetExports());
-    } else {
-      // Failure, remove the module from the module store
-      module_loader->module_factory_->RemoveModule(module);
-      // Ensure that an exception is returned
-      v8::Handle<v8::Value> exception = module->GetException();
-      if (exception.IsEmpty()) {
-        std::string error("Failed to load module ");
-        error.append(id);
-        return handle_scope.Close(v8::ThrowException(
-              v8::String::New(error.c_str())));
-      } else {
-        return handle_scope.Close(v8::ThrowException(exception));
-      }
-    }
+  if (!module.get()) {
+    // The request module was not found, return an exception
+    std::string error("No module named ");
+    error.append(id);
+    return handle_scope.Close(v8::ThrowException(
+          v8::String::New(error.c_str())));
   }
-  // The request module was not found, return an exception
-  std::string error("No module named ");
-  error.append(id);
-  return handle_scope.Close(v8::ThrowException(v8::String::New(error.c_str())));
+  // The requested module was found, store it on the module stack
+  module_loader->module_stack_.push(module);
+  // Attempt to load the module
+  bool status = module->Load();
+  // Pop the module off the module stack
+  module_loader->module_stack_.pop();
+  if (!status) {
+    // Failure, remove the module from the module store
+    module_loader->module_factory_->RemoveModule(module);
+    // Ensure that an exception is returned
+    v8::Handle<v8::Value> exception = module->GetException();
+    if (exception.IsEmpty()) {
+      std::string error("Failed to load module ");
+      error.append(id);
+      return handle_scope.Close(v8::ThrowException(
+            v8::String::New(error.c_str())));
+    }
+    return handle_scope.Close(v8::ThrowException(exception));
+  }
+  // Successfully loaded, return exports
+  return handle_scope.Close(module->GetExports());
 }
 
 } // namespace commonjs

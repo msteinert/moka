@@ -7,13 +7,13 @@ foo_la_SOURCES = foo.cc
 
 foo_la_CPPFLAGS = -I$(top_srcdir)
 
-foo_la_LDFLAGS = -avoid-version -module -shared -export-dynamic -rpath /nowhere
+foo_la_LDFLAGS = -avoid-version -module -rpath /nowhere
 
 bar_la_SOURCES = bar.cc
 
 bar_la_CPPFLAGS = -I$(top_srcdir)
 
-bar_la_LDFLAGS = -avoid-version -module -shared -export-dynamic -rpath /nowhere
+bar_la_LDFLAGS = -avoid-version -module -shared -rpath /nowhere
 
 check_PROGRAMS = v8-module
 

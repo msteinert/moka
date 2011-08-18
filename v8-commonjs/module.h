@@ -214,6 +214,7 @@ public:
   void SetException(const char* exception) {
     if (!exception_.IsEmpty()) {
       exception_.Dispose();
+      exception_.Clear();
     }
     exception_ = v8::Persistent<v8::Value>::New(
         v8::Exception::Error(v8::String::New(exception)));
@@ -236,6 +237,7 @@ public:
   void SetException(v8::Handle<v8::Value> exception) {
     if (!exception_.IsEmpty()) {
       exception_.Dispose();
+      exception_.Clear();
     }
     exception_ = v8::Persistent<v8::Value>::New(exception);
   }
