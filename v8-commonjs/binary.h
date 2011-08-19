@@ -46,28 +46,52 @@ public:
     return length_;
   }
 
-  unsigned char* GetData() {
+  uint8_t* GetData() {
     return data_;
   }
 
-private: // V8 interface methods
-  static v8::Handle<v8::Value> Construct(const v8::Arguments& arguments);
+  v8::Handle<v8::Value> Resize(uint32_t size);
+
+  v8::Handle<v8::Value> Join(v8::Handle<v8::Array> array, uint8_t number);
+
+  uint8_t Get(uint32_t index) const {
+    return data_[index];
+  }
+
+  void Set(uint32_t index, uint8_t value) {
+    data_[index] = value;
+  }
+
+protected: // V8 interface methods
+  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> LengthGet(v8::Local<v8::String> property,
+      const v8::AccessorInfo &info);
 
 protected: // Protected methods
   Binary();
 
   virtual ~Binary();
 
-  virtual v8::Handle<v8::Value> Initialize(int length);
+  virtual v8::Handle<v8::Value> Construct(int length);
+
+  virtual v8::Handle<v8::Value> Construct(v8::Handle<v8::Object> object);
+
+  virtual v8::Handle<v8::Value> Construct(v8::Handle<v8::Array> numbers);
+
+  virtual v8::Handle<v8::Value> Construct(v8::Handle<v8::String> string,
+      v8::Handle<v8::String> charset);
+
+  virtual v8::Handle<v8::Value> Construct(v8::Handle<v8::Uint32> length);
 
 private: // Private methods
   Binary(Binary const& that);
 
   void operator=(Binary const& that);
 
-protected: // Protected data
+private: // Private data
   uint32_t length_;
-  unsigned char* data_;
+  uint8_t* data_;
 };
 
 class commonjs::ByteString: public commonjs::Binary {
@@ -75,29 +99,29 @@ public:
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
 private: // V8 interface methods
-  static v8::Handle<v8::Value> Construct(const v8::Arguments& arguments);
+  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
 
   static void Delete(v8::Persistent<v8::Value> object, void* parameters);
+
+  static v8::Handle<v8::Value> GetIndex(uint32_t index,
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> SetIndex(uint32_t index,
+      v8::Local<v8::Value> value, const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Integer> QueryIndex(uint32_t index,
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> Join(const v8::Arguments& arguments);
 
 private: // Private methods
   ByteString() {}
 
-  virtual ~ByteString() {}
-
-  virtual v8::Handle<v8::Value> Initialize(Binary* that);
-
-  virtual v8::Handle<v8::Value> Initialize(v8::Handle<v8::Object> binary);
-
-  virtual v8::Handle<v8::Value> Initialize(v8::Handle<v8::Array> numbers);
-
-  virtual v8::Handle<v8::Value> Initialize(v8::Handle<v8::String> string,
-      v8::Handle<v8::String> charset);
+  ~ByteString() {}
 
   ByteString(ByteString const& that);
 
   void operator=(ByteString const& that);
-
-private: // Private data
 };
 
 class commonjs::ByteArray: public commonjs::Binary {
@@ -105,18 +129,30 @@ public:
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
 private: // V8 interface methods
-  static v8::Handle<v8::Value> Construct(const v8::Arguments& arguments);
+  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
 
   static void Delete(v8::Persistent<v8::Value> object, void* parameters);
 
+  static void LengthSet(v8::Local<v8::String> property,
+      v8::Local<v8::Value> value, const v8::AccessorInfo& info);
+
+  static v8::Handle<v8::Value> GetIndex(uint32_t index,
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> SetIndex(uint32_t index,
+      v8::Local<v8::Value> value, const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Integer> QueryIndex(uint32_t index,
+      const v8::AccessorInfo &info);
+
 private: // Private methods
-  ByteArray();
+  ByteArray() {}
+
+  ~ByteArray() {}
 
   ByteArray(ByteArray const& that);
 
   void operator=(ByteArray const& that);
-
-private: // Private data
 };
 
 #endif // V8_COMMONJS_BINARY_H

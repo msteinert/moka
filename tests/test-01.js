@@ -1,13 +1,10 @@
 binary = require('binary');
 try {
-	s1 = new binary.ByteString([1, 2, 3]);
-	s2 = new binary.ByteString(s1);
-	if (s1 instanceof binary.ByteString) {
-		print('foo');
-	}
-	if (s2 instanceof binary.Binary) {
-		print('bar');
+	s = new binary.ByteString([1, 2, 3]);
+	t = s.join([100, 101, 102], 200);
+	for (var i = 0; i < t.length; ++i) {
+		print(t[i]);
 	}
 } catch(error) {
-	print(error);
+	print("error: " + error);
 }
