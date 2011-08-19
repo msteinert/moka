@@ -1,7 +1,7 @@
 #                                        -*- Automake -*-
 # Process this file with automake to produce Makefile.in.
 
-# library definition
+# V8-CommonJS library
 lib_LTLIBRARIES = libv8-commonjs.la
 libv8_commonjs_la_SOURCES = \
 	module.cc \
@@ -12,29 +12,33 @@ libv8_commonjs_la_SOURCES = \
 	script-module.h \
 	so-module.cc \
 	so-module.h
-# include directories & compiler switches
 libv8_commonjs_la_CPPFLAGS = \
-	-DLIBDIR=\"$(libdir)\" \
-	-I$(top_srcdir)
+	-I$(top_srcdir) \
+	-DLIBDIR=\"$(libdir)\"
 libv8_commonjs_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
 	-ldl
+# Modules
+module_LTLIBRARIES = \
+	binary.la \
+	system.la
+binary_la_SOURCES = binary.cc
+system_la_SOURCES = system.cc
+# Module flags
+AM_CPPFLAGS = -I$(top_srcdir)
+AM_LDFLAGS = \
+	-avoid-version \
+	-module \
+	-shared \
+	libv8-commonjs.la
+# Module dependencies
+$(module_LTLIBRARIES): libv8-commonjs.la
 # install development headers
 pkgincludedir = $(includedir)/v8-commonjs
 pkginclude_HEADERS = \
+	binary.h \
 	commonjs.h \
 	macros.h \
 	module.h \
-	module-loader.h
-# addon modules
-module_LTLIBRARIES = \
-	system.la
-system_la_SOURCES = \
-	system.cc \
+	module-loader.h \
 	system.h
-system_la_CPPFLAGS = \
-	-I$(top_srcdir)
-system_la_LDFLAGS = \
-	-avoid-version -module -shared \
-	libv8-commonjs.la
-$(module_LTLIBRARIES): libv8-commonjs.la

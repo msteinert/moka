@@ -25,8 +25,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef V8_COMMONJS_SYSTEM_H
-#define V8_COMMONJS_SYSTEM_H
+#ifndef V8_COMMONJS_IO_H
+#define V8_COMMONJS_IO_H
 
 #include <cstdio>
 #include <string>
@@ -34,39 +34,74 @@
 
 namespace commonjs {
 
-class Stdin;
-class Stdout;
-class Stderr;
-class Env;
-class Args;
+class Stream;
 
 } // namespace commonjs
 
-class commonjs::Stdin {
+class commonjs::Stream {
 public:
-  static bool Initialize(commonjs::Module& module);
+  Stream();
+
+  Stream(FILE* file);
+
+  ~File();
+
+  const char* GetMessage() const {
+    return message_.c_str();
+  }
+
+  bool Open(const char* filename, const char* mode);
+
+  void Close();
+
+  void Flush();
+
+  void SetError();
+
+  void SetError(const char* message);
+
+  bool CheckError();
+
+  void Print(char character);
+
+  void Print(const char* string);
+
+  void Print(v8::Handle<v8::Value> value);
+
+  void Println(v8::Handle<v8::Value> value);
+
+  void Write(v8::Handle<v8::Value> value);
+
+private:
+  FILE* file_;
+  int error_;
+  std::string message_;
 };
 
-class commonjs::Stdout {
+class commonjs::PrintStream {
 public:
-  static bool Initialize(commonjs::Module& module);
+  static v8::Local<v8::FunctionTemplate> NewFunctionTemplate(FILE* file);
+
+  static v8::Persistent<v8::Object> New(FILE* file);
+
+private:
+  static void Delete(v8::Persistent<v8::Value> object, void* parameter);
+
+  static v8::Handle<v8::Value> Close(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Flush(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> SetError(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> CheckError(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Print(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Println(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Write(const v8::Arguments& arguments);
 };
 
-class commonjs::Stderr {
-public:
-  static bool Initialize(commonjs::Module& module);
-};
-
-class commonjs::Env {
-public:
-  static bool Initialize(commonjs::Module& module);
-};
-
-class commonjs::Args {
-public:
-  static bool Initialize(commonjs::Module& module, int argc, char** argv);
-};
-
-#endif // V8_COMMONJS_SYSTEM_H
+#endif // V8_COMMONJS_IO_H
 
 // vim: tabstop=2:sw=2:expandtab
