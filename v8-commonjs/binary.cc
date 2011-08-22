@@ -706,7 +706,7 @@ v8::Handle<v8::Integer> ByteArray::QueryIndex(uint32_t index,
 }
 
 // Initialize module
-static bool binary_initialize(Module& module, int* argc, char*** argv)
+static bool BinaryInitialize(Module& module, int* argc, char*** argv)
 {
   v8::HandleScope handle_scope;
   v8::Handle<v8::Object> exports = module.GetExports();
@@ -721,6 +721,6 @@ static bool binary_initialize(Module& module, int* argc, char*** argv)
 
 } // namespace commonjs
 
-COMMONJS_MODULE(commonjs::binary_initialize)
+COMMONJS_MODULE(commonjs::BinaryInitialize)
 
 // vim: tabstop=2:sw=2:expandtab

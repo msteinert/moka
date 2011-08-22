@@ -341,6 +341,7 @@ static v8::Handle<v8::Value> Error(const v8::Arguments& arguments) {
             v8::String::New("Argument one must be a code block"))));
   }
   v8::TryCatch try_catch;
+  v8::Local<v8::Value> caught;
   v8::Local<v8::Value> value = v8::Function::Cast(*block)->Call(
       block->ToObject(), 0, NULL);
   if (value.IsEmpty()) {
@@ -348,23 +349,21 @@ static v8::Handle<v8::Value> Error(const v8::Arguments& arguments) {
       if (error.IsEmpty()) {
         return handle_scope.Close(v8::True());
       }
-      v8::Local<v8::Value> caught = try_catch.Exception();
-      if (!error->IsObject()) {
-        if (error->Equals(error)) {
+      caught = try_catch.Exception();
+      if (error->IsObject() && caught->IsObject()) {
+        if (error->ToObject()->GetPrototype()->Equals(
+              caught->ToObject()->GetPrototype())) {
           return handle_scope.Close(v8::True());
         }
       } else {
-        if (error->ToObject()->GetPrototype()->Equals(
-              caught->ToObject()->GetPrototype())) {
+        if (error->Equals(caught)) {
           return handle_scope.Close(v8::True());
         }
       }
     }
   }
-  return handle_scope.Close(v8::ThrowException(AssertionError::New(
-          v8::Handle<v8::Value>(),
-          error.IsEmpty() ? v8::Handle<v8::Value>() : error,
-          message)));
+  return handle_scope.Close(v8::ThrowException(
+        AssertionError::New(caught, error, message)));
 }
 
 static bool AssertInitialize(Module& module, int* argc, char*** argv) {

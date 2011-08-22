@@ -1,4 +1,5 @@
 var assert = require('assert');
+var test = require('test');
 try {
 	//assert.deepEqual([1, 2, 3], [1, 2, 3]);
 	/*
@@ -7,8 +8,8 @@ try {
 	assert.deepEqual({one: 1, two: 2}, {two: 2});
 	*/
 	assert.throws(function() {
-		throw RangeError;
+		throw { message: 'foo' };
 	}, Error);
 } catch(err) {
-	print(err + ": " + err.expected + " != " + err.actual);
+	print(err.expected + " != " + err.actual);
 }

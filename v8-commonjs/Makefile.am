@@ -22,7 +22,8 @@ libv8_commonjs_la_LDFLAGS = \
 module_LTLIBRARIES = \
 	assert.la \
 	binary.la \
-	system.la
+	system.la \
+	test.la
 assert_la_SOURCES = \
 	assert.cc \
 	assert.h
@@ -32,6 +33,9 @@ binary_la_SOURCES = \
 system_la_SOURCES = \
 	system.cc \
 	system.h
+test_la_SOURCES = \
+	test.cc \
+	test.h
 # Module flags
 AM_CPPFLAGS = -I$(top_srcdir)
 AM_LDFLAGS = \

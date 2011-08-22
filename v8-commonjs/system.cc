@@ -138,7 +138,7 @@ bool Args::Initialize(Module& module, int argc, char** argv) {
   return true;
 }
 
-static bool system_initialize(Module& module, int* argc, char*** argv)
+static bool SystemInitialize(Module& module, int* argc, char*** argv)
 {
   v8::HandleScope handle_scope;
   if (!Stdin::Initialize(module)) {
@@ -161,6 +161,6 @@ static bool system_initialize(Module& module, int* argc, char*** argv)
 
 } // namespace commonjs
 
-COMMONJS_MODULE(commonjs::system_initialize)
+COMMONJS_MODULE(commonjs::SystemInitialize)
 
 // vim: tabstop=2:sw=2:expandtab
