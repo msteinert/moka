@@ -39,34 +39,42 @@ namespace commonjs {
 
 // Binary
 Binary::Binary()
-  : length_(0)
+  : size_(0)
+  , length_(0)
   , data_(NULL) {}
 
 Binary::~Binary() {
   if (data_) {
-    delete[] data_;
+    ::free(data_);
   }
 }
 
 v8::Handle<v8::Value> Binary::Resize(uint32_t length) {
   v8::HandleScope handle_scope;
-  if (length == length_) {
-    return handle_scope.Close(v8::Handle<v8::Value>());
-  }
-  uint8_t* data = NULL;
-  if (length) {
-    data = new uint8_t[length];
-    if (!data) {
-      return handle_scope.Close(v8::Exception::Error(
-            v8::String::New("No memory")));
-    }
-    memcpy(data, data_, length_);
+  if (size_ >= length) {
     if (length > length_) {
-      memset(data + length_, 0, length - length_);
+      ::memset(data_ + length_, 0, length - length_);
     }
     length_ = length;
-    delete[] data_;
-    data_ = data;
+  } else {
+    if (length) {
+      uint8_t* data = static_cast<uint8_t*>(
+          ::realloc(static_cast<void*>(data_), length));
+      if (!data) {
+        char message[BUFSIZ];
+        ::strerror_r(errno, message, BUFSIZ);
+        return handle_scope.Close(v8::Exception::Error(
+              v8::String::New(message)));
+      }
+      ::memcpy(data, data_, length_);
+      if (length > length_) {
+        ::memset(data + length_, 0, length - length_);
+      }
+      size_ = length;
+      length_ = length;
+      ::free(data_);
+      data_ = data;
+    }
   }
   return handle_scope.Close(v8::Handle<v8::Value>());
 }
@@ -80,7 +88,7 @@ v8::Handle<v8::Value> Binary::Join(v8::Handle<v8::Array> array,
           v8::String::New("Array has no properties")));
   }
   uint32_t length = properties->Length();
-  v8::Handle<v8::Value> exception = Construct((length * 2) - 1);
+  v8::Handle<v8::Value> exception = Resize((length * 2) - 1);
   if (!exception.IsEmpty()) {
     return handle_scope.Close(exception);
   }
@@ -116,18 +124,21 @@ v8::Handle<v8::Value> Binary::Join(v8::Handle<v8::Array> array,
 v8::Handle<v8::Value> Binary::Construct(int length) {
   v8::HandleScope handle_scope;
   if (data_) {
+    size_ = 0;
     length_ = 0;
-    delete[] data_;
+    ::free(data_);
     data_ = NULL;
   }
   if (length) {
-    data_ = new uint8_t[length];
+    data_ = static_cast<uint8_t*>(::calloc(length, sizeof(uint8_t)));
     if (!data_) {
+      char message[BUFSIZ];
+      ::strerror_r(errno, message, BUFSIZ);
       return handle_scope.Close(v8::Exception::Error(
-            v8::String::New("No memory")));
+            v8::String::New(message)));
     }
+    size_ = length;
     length_ = length;
-    memset(data_, 0, length_);
   }
   return handle_scope.Close(v8::Handle<v8::Value>());
 }
@@ -297,9 +308,10 @@ v8::Handle<v8::FunctionTemplate> Binary::GetTemplate() {
   }
   v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
   templ->SetClassName(v8::String::NewSymbol("Binary"));
-  v8::Local<v8::Signature> length_signature = v8::Signature::New(templ);
   templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("length"),
       LengthGet);
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toArray"),
+      v8::FunctionTemplate::New(ToArray)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -321,6 +333,31 @@ v8::Handle<v8::Value> Binary::LengthGet(v8::Local<v8::String> property,
   return handle_scope.Close(v8::Uint32::New(self->length_));
 }
 
+v8::Handle<v8::Value> Binary::ToArray(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  v8::Local<v8::Object> object = arguments.This();
+  v8::Local<v8::External> external =
+    v8::Local<v8::External>::Cast(object->GetInternalField(0));
+  Binary* self = static_cast<Binary*>(external->Value());
+  if (0 == arguments.Length()) {
+    v8::Local<v8::Array> array = v8::Array::New(self->GetLength());
+    for (uint32_t index = 0; index < self->GetLength(); ++index) {
+      array->Set(index, v8::Uint32::New(self->Get(index)));
+    }
+    return handle_scope.Close(array);
+  } else if (1 == arguments.Length()) {
+    if (!arguments[0]->IsString()) {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be a string"))));
+    }
+    // TODO iconv
+  } else {
+    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Zero or one argument allowed"))));
+  }
+  return handle_scope.Close(v8::Handle<v8::Value>());
+}
+
 // ByteString
 v8::Handle<v8::FunctionTemplate> ByteString::GetTemplate() {
   v8::HandleScope handle_scope;
@@ -334,7 +371,7 @@ v8::Handle<v8::FunctionTemplate> ByteString::GetTemplate() {
   templ->Inherit(Binary::GetTemplate());
   templ->InstanceTemplate()->SetIndexedPropertyHandler(GetIndex, SetIndex,
       QueryIndex);
-  templ->InstanceTemplate()->Set(v8::String::NewSymbol("join"),
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("join"),
       v8::FunctionTemplate::New(Join)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
@@ -671,6 +708,7 @@ v8::Handle<v8::Integer> ByteArray::QueryIndex(uint32_t index,
 // Initialize module
 static bool binary_initialize(Module& module, int* argc, char*** argv)
 {
+  v8::HandleScope handle_scope;
   v8::Handle<v8::Object> exports = module.GetExports();
   exports->Set(v8::String::NewSymbol("Binary"),
       Binary::GetTemplate()->GetFunction());

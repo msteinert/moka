@@ -68,6 +68,8 @@ protected: // V8 interface methods
   static v8::Handle<v8::Value> LengthGet(v8::Local<v8::String> property,
       const v8::AccessorInfo &info);
 
+  static v8::Handle<v8::Value> ToArray(const v8::Arguments& arguments);
+
 protected: // Protected methods
   Binary();
 
@@ -90,6 +92,7 @@ private: // Private methods
   void operator=(Binary const& that);
 
 private: // Private data
+  uint32_t size_;
   uint32_t length_;
   uint8_t* data_;
 };
@@ -98,7 +101,7 @@ class commonjs::ByteString: public commonjs::Binary {
 public:
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
-private: // V8 interface methods
+protected: // V8 interface methods
   static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
 
   static void Delete(v8::Persistent<v8::Value> object, void* parameters);
@@ -128,7 +131,7 @@ class commonjs::ByteArray: public commonjs::Binary {
 public:
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
-private: // V8 interface methods
+protected: // V8 interface methods
   static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
 
   static void Delete(v8::Persistent<v8::Value> object, void* parameters);

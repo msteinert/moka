@@ -20,10 +20,18 @@ libv8_commonjs_la_LDFLAGS = \
 	-ldl
 # Modules
 module_LTLIBRARIES = \
+	assert.la \
 	binary.la \
 	system.la
-binary_la_SOURCES = binary.cc
-system_la_SOURCES = system.cc
+assert_la_SOURCES = \
+	assert.cc \
+	assert.h
+binary_la_SOURCES = \
+	binary.cc \
+	binary.h
+system_la_SOURCES = \
+	system.cc \
+	system.h
 # Module flags
 AM_CPPFLAGS = -I$(top_srcdir)
 AM_LDFLAGS = \
@@ -36,9 +44,7 @@ $(module_LTLIBRARIES): libv8-commonjs.la
 # install development headers
 pkgincludedir = $(includedir)/v8-commonjs
 pkginclude_HEADERS = \
-	binary.h \
 	commonjs.h \
 	macros.h \
 	module.h \
-	module-loader.h \
-	system.h
+	module-loader.h

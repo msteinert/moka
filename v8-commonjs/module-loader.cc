@@ -236,20 +236,13 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
   if ('.' != id[0]) {
     // Normal require, search through stored paths
     v8::Local<v8::Array> properties = module_loader->paths_->GetPropertyNames();
-    if (!properties.IsEmpty()) {
-      uint32_t index = 0, length = properties->Length();
-      while ((index < length) && !module.get()) {
-        v8::Local<v8::Value> index_value = properties->Get(index++);
-        if (index_value->IsUint32()) {
-          v8::Local<v8::Value> path_value =
-            module_loader->paths_->Get(index_value->Uint32Value());
-          if (!path_value.IsEmpty()) {
-            if (path_value->IsString()) {
-              module = module_loader->module_factory_->NewModule(id.c_str(),
-                  *v8::String::Utf8Value(path_value));
-            }
-          }
-        }
+    uint32_t index = 0, length = properties->Length();
+    while ((index < length) && !module.get()) {
+      v8::Local<v8::Value> path_value =
+        module_loader->paths_->Get(properties->Get(index++));
+      if (path_value->IsString()) {
+        module = module_loader->module_factory_->NewModule(id.c_str(),
+            *v8::String::Utf8Value(path_value));
       }
     }
   } else {
