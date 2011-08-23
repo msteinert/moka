@@ -59,7 +59,7 @@ public:
   /**
    * \brief Construct a module factory
    *
-   * \param secure [in] Indicates if this should be a secure module loader
+   * \param secure [in] Indicates if this should be a secure module factory
    * \param require [in] The object implementing the 'require' function
    * \param module [in] The main module object
    * \param argc [in] A pointer to the application argument count

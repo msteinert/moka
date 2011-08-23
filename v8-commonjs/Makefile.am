@@ -4,6 +4,7 @@
 # V8-CommonJS library
 lib_LTLIBRARIES = libv8-commonjs.la
 libv8_commonjs_la_SOURCES = \
+	commonjs.cc \
 	module.cc \
 	module-factory.cc \
 	module-factory.h \
@@ -34,8 +35,7 @@ system_la_SOURCES = \
 	system.cc \
 	system.h
 test_la_SOURCES = \
-	test.cc \
-	test.h
+	test.cc
 # Module flags
 AM_CPPFLAGS = -I$(top_srcdir)
 AM_LDFLAGS = \

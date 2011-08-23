@@ -33,7 +33,6 @@
 
 namespace commonjs {
 
-// AssertionError
 v8::Handle<v8::Value> AssertionError::New(v8::Handle<v8::Value> actual,
     v8::Handle<v8::Value> expected, v8::Handle<v8::Value> message) {
   v8::HandleScope handle_scope;
@@ -95,9 +94,10 @@ v8::Handle<v8::Value> AssertionError::New(const v8::Arguments& arguments) {
     delete[] argv;
     return handle_scope.Close(instance);
   }
+  v8::Handle<v8::Object> self = arguments.This();
+  self->Set(v8::String::NewSymbol("name"), v8::String::New("AssertionError"));
   if (arguments.Length()) {
     v8::Local<v8::String> message_string = v8::String::NewSymbol("message");
-    v8::Handle<v8::Object> self = arguments.This();
     if (arguments[0]->IsObject()) {
       v8::Local<v8::Object> options = arguments[0]->ToObject();
       v8::Local<v8::String> actual_string = v8::String::NewSymbol("actual");
@@ -120,7 +120,7 @@ v8::Handle<v8::Value> AssertionError::New(const v8::Arguments& arguments) {
       }
     }
   }
-  return arguments.This();
+  return self;
 }
 
 v8::Handle<v8::Value> AssertionError::ToString(const v8::Arguments& arguments) {
@@ -151,7 +151,7 @@ static v8::Handle<v8::Value> Ok(const v8::Arguments& arguments) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], v8::True())));
     }
-  } else if (2 == arguments.Length()) {
+  } else if (2 <= arguments.Length()) {
     if (!arguments[0]->ToBoolean()->Equals(v8::True())) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], v8::True(), arguments[1])));
@@ -170,7 +170,7 @@ static v8::Handle<v8::Value> Equal(const v8::Arguments& arguments) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1])));
     }
-  } else if (3 == arguments.Length()) {
+  } else if (3 <= arguments.Length()) {
     if (!arguments[0]->Equals(arguments[1])) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1], arguments[2])));
@@ -189,7 +189,7 @@ static v8::Handle<v8::Value> NotEqual(const v8::Arguments& arguments) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1])));
     }
-  } else if (3 == arguments.Length()) {
+  } else if (3 <= arguments.Length()) {
     if (arguments[0]->Equals(arguments[1])) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1], arguments[2])));
@@ -204,38 +204,35 @@ static v8::Handle<v8::Value> NotEqual(const v8::Arguments& arguments) {
 bool RealDeepEqual(v8::Handle<v8::Value> a, v8::Handle<v8::Value> b) {
   if (a->StrictEquals(b)) {
     return true;
-  }
-  if (a->IsDate() && b->IsDate()) {
-    if (a->NumberValue() != b->NumberValue()) {
+  } else if (a->IsDate() && b->IsDate()) {
+    return a->NumberValue() == b->NumberValue();
+  } else if (!a->IsObject() && !b->IsObject()) {
+    return a->Equals(b);
+  } else if (a->IsString() || b->IsString()) {
+    return a->StrictEquals(b);
+  } else {
+    v8::Local<v8::Object> a_object = a->ToObject();
+    v8::Local<v8::Object> b_object = b->ToObject();
+    v8::Local<v8::String> prototype = v8::String::NewSymbol("prototype");
+    if (!a_object->Get(prototype)->Equals(b_object->Get(prototype))) {
       return false;
     }
-  }
-  if (!a->IsObject() && !b->IsObject()) {
-    if (!a->Equals(b)) {
-      return false;
+    v8::Local<v8::Array> a_properties = a_object->GetPropertyNames();
+    for (uint32_t index = 0; index < a_properties->Length(); ++index) {
+      v8::Local<v8::Value> value = a_properties->Get(index);
+      if (!RealDeepEqual(a_object->Get(value), b_object->Get(value))) {
+        return false;
+      }
     }
-  }
-  if (a->IsString() || b->IsString()) {
-    if (!a->StrictEquals(b)) {
-      return false;
+    v8::Local<v8::Array> b_properties = b_object->GetPropertyNames();
+    for (uint32_t index = 0; index < b_properties->Length(); ++index) {
+      v8::Local<v8::Value> value = b_properties->Get(index);
+      if (!RealDeepEqual(b_object->Get(value), a_object->Get(value))) {
+        return false;
+      }
     }
+    return true;
   }
-  v8::Local<v8::Object> a_object = a->ToObject();
-  v8::Local<v8::Object> b_object = b->ToObject();
-  v8::Local<v8::String> prototype = v8::String::NewSymbol("prototype");
-  if (!a_object->Get(prototype)->Equals(b_object->Get(prototype))) {
-    return false;
-  }
-  v8::Local<v8::Array> properties = a_object->GetPropertyNames();
-  uint32_t index = 0, length = properties->Length();
-  while (index < length) {
-    v8::Local<v8::Value> value = properties->Get(index);
-    if (!RealDeepEqual(a_object->Get(value), b_object->Get(value))) {
-      return false;
-    }
-    ++index;
-  }
-  return true;
 }
 
 static v8::Handle<v8::Value> DeepEqual(const v8::Arguments& arguments) {
@@ -243,12 +240,12 @@ static v8::Handle<v8::Value> DeepEqual(const v8::Arguments& arguments) {
   if (2 == arguments.Length()) {
     if (!RealDeepEqual(arguments[0], arguments[1])) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
-              arguments[0], arguments[1])));
+              v8::Handle<v8::Value>(), v8::Handle<v8::Value>())));
     }
-  } else if (3 == arguments.Length()) {
+  } else if (3 <= arguments.Length()) {
     if (!RealDeepEqual(arguments[0], arguments[1])) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
-              arguments[0], arguments[1], arguments[2])));
+              v8::Handle<v8::Value>(), v8::Handle<v8::Value>(), arguments[2])));
     }
   } else {
     return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
@@ -264,7 +261,7 @@ static v8::Handle<v8::Value> NotDeepEqual(const v8::Arguments& arguments) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1])));
     }
-  } else if (3 == arguments.Length()) {
+  } else if (3 <= arguments.Length()) {
     if (RealDeepEqual(arguments[0], arguments[1])) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1], arguments[2])));
@@ -283,7 +280,7 @@ static v8::Handle<v8::Value> StrictEqual(const v8::Arguments& arguments) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1])));
     }
-  } else if (3 == arguments.Length()) {
+  } else if (3 <= arguments.Length()) {
     if (!arguments[0]->StrictEquals(arguments[1])) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1], arguments[2])));
@@ -302,7 +299,7 @@ static v8::Handle<v8::Value> NotStrictEqual(const v8::Arguments& arguments) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1])));
     }
-  } else if (3 == arguments.Length()) {
+  } else if (3 <= arguments.Length()) {
     if (arguments[0]->StrictEquals(arguments[1])) {
       return handle_scope.Close(v8::ThrowException(AssertionError::New(
               arguments[0], arguments[1], arguments[2])));
@@ -328,7 +325,7 @@ static v8::Handle<v8::Value> Error(const v8::Arguments& arguments) {
     } else {
       error= arguments[1];
     }
-  } else if (3 == arguments.Length()) {
+  } else if (3 <= arguments.Length()) {
     block = arguments[0];
     error = arguments[1];
     message = arguments[2];
@@ -336,31 +333,38 @@ static v8::Handle<v8::Value> Error(const v8::Arguments& arguments) {
     return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
             v8::String::New("One, two or three arguments allowed"))));
   }
-  if (!block->IsFunction()) {
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be a code block"))));
-  }
-  v8::TryCatch try_catch;
   v8::Local<v8::Value> caught;
-  v8::Local<v8::Value> value = v8::Function::Cast(*block)->Call(
-      block->ToObject(), 0, NULL);
-  if (value.IsEmpty()) {
-    if (try_catch.HasCaught()) {
-      if (error.IsEmpty()) {
-        return handle_scope.Close(v8::True());
-      }
-      caught = try_catch.Exception();
-      if (error->IsObject() && caught->IsObject()) {
-        if (error->ToObject()->GetPrototype()->Equals(
-              caught->ToObject()->GetPrototype())) {
+  if (block->IsFunction()) {
+    v8::TryCatch try_catch;
+    v8::Local<v8::Value> value = v8::Function::Cast(*block)->Call(
+        block->ToObject(), 0, NULL);
+    if (value.IsEmpty()) {
+      if (try_catch.HasCaught()) {
+        if (error.IsEmpty()) {
           return handle_scope.Close(v8::True());
         }
-      } else {
-        if (error->Equals(caught)) {
-          return handle_scope.Close(v8::True());
+        caught = try_catch.Exception();
+        if (error->IsFunction() && caught->IsObject()) {
+          if (caught->ToObject()->GetConstructorName()->Equals(
+                v8::Function::Cast(*error)->GetName())) {
+            return handle_scope.Close(v8::True());
+          }
+        } else if (error->IsFunction() && caught->IsObject()) {
+          if (error->ToObject()->GetPrototype()->Equals(
+                caught->ToObject()->GetPrototype())) {
+            return handle_scope.Close(v8::True());
+          }
+        } else {
+          if (error->Equals(caught)) {
+            return handle_scope.Close(v8::True());
+          }
         }
+        return handle_scope.Close(v8::ThrowException(try_catch.ReThrow()));
       }
     }
+  } else {
+    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be a code block"))));
   }
   return handle_scope.Close(v8::ThrowException(
         AssertionError::New(caught, error, message)));

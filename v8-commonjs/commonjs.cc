@@ -25,15 +25,33 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef V8_COMMONJS_TEST_H
-#define V8_COMMONJS_TEST_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include "v8-commonjs/module.h"
+#include "v8-commonjs/commonjs.h"
 
 namespace commonjs {
 
-} // namespace commonjs
+v8::Handle<v8::Value> Require(v8::Handle<v8::String> name) {
+    v8::Handle<v8::Value> require = v8::Context::GetCurrent()->Global()->
+      Get(v8::String::NewSymbol("require"));
+    if (require.IsEmpty()) {
+      // Should be unreachable
+      v8::ThrowException(v8::Exception::Error(
+            v8::String::New("Require is empty")));
+      return v8::Handle<v8::Value>();
+    }
+    if (!require->IsFunction()) {
+      // Should be unreachable
+      v8::ThrowException(v8::Exception::Error(
+            v8::String::New("Require is not a function")));
+      return v8::Handle<v8::Value>();
+    }
+    v8::Handle<v8::Value> argv[1] = { name };
+    return v8::Function::Cast(*require)->Call(require->ToObject(), 1, argv);
+}
 
-#endif // V8_COMMONJS_TEST_H
+} // namespace commonjs
 
 // vim: tabstop=2:sw=2:expandtab

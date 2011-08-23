@@ -163,12 +163,10 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
   ModulePointer module;
   char* id = NewId(resolved_path);
   if (id) {
-    module.reset(new Module(id, resolved_path, secure_, require_,
-          context_));
+    module.reset(new Module(id, resolved_path, secure_, require_, context_));
     ::free(id);
   } else {
-    module.reset(new Module(".", resolved_path, secure_, require_,
-          context_));
+    module.reset(new Module(".", resolved_path, secure_, require_, context_));
   }
   if (!module.get()) {
     error_.assign("No memory");

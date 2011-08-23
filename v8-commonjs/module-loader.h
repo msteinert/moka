@@ -42,7 +42,6 @@
 namespace commonjs {
 
 class ModuleLoader;
-
 class Module;
 
 namespace internal {

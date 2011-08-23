@@ -138,8 +138,18 @@ bool Args::Initialize(Module& module, int argc, char** argv) {
   return true;
 }
 
-static bool SystemInitialize(Module& module, int* argc, char*** argv)
-{
+static v8::Handle<v8::Value> Exit(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  int status = EXIT_SUCCESS;
+  if (0 < arguments.Length()) {
+    if (arguments[0]->IsInt32()) {
+      status = arguments[0]->ToInt32()->Value();
+    }
+  }
+  ::exit(status);
+}
+
+static bool SystemInitialize(Module& module, int* argc, char*** argv) {
   v8::HandleScope handle_scope;
   if (!Stdin::Initialize(module)) {
     return false;
@@ -156,6 +166,9 @@ static bool SystemInitialize(Module& module, int* argc, char*** argv)
   if (!Args::Initialize(module, argc ? *argc : 0, argv ? *argv : NULL)) {
     return false;
   }
+  v8::Handle<v8::Object> exports = module.GetExports();
+  exports->Set(v8::String::NewSymbol("exit"),
+      v8::FunctionTemplate::New(Exit)->GetFunction());
   return true;
 }
 

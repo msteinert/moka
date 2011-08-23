@@ -47,6 +47,27 @@
 // Include the module loader API
 #include <v8-commonjs/module-loader.h>
 
+// Include the V8 API
+#include <v8.h>
+
+namespace commonjs {
+
+/**
+ * \brief Load a module from C++.
+ *
+ * This function calls the require function in the current execution context.
+ *
+ * \note The result of calling this function without initializing the module
+ *       loader is undefined.
+ *
+ * \param name [in] The name of the module to load.
+ *
+ * \return The exports from the loaded module.
+ */
+v8::Handle<v8::Value> Require(v8::Handle<v8::String> name);
+
+}
+
 #endif // V8_COMMONJS_H
 
 // vim: tabstop=2:sw=2:expandtab
