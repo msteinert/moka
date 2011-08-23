@@ -33,6 +33,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iconv.h>
+#include <sstream>
 #include "v8-commonjs/binary.h"
 
 namespace commonjs {
@@ -58,7 +59,7 @@ v8::Handle<v8::Value> Binary::Resize(uint32_t length) {
     length_ = length;
   } else {
     if (length) {
-      uint8_t* data = static_cast<uint8_t*>(
+      char* data = static_cast<char*>(
           ::realloc(static_cast<void*>(data_), length));
       if (!data) {
         char message[BUFSIZ];
@@ -80,7 +81,7 @@ v8::Handle<v8::Value> Binary::Resize(uint32_t length) {
 }
 
 v8::Handle<v8::Value> Binary::Join(v8::Handle<v8::Array> array,
-    uint8_t number) {
+    char number) {
   v8::HandleScope handle_scope;
   v8::Local<v8::Array> properties = array->GetPropertyNames();
   if (properties.IsEmpty()) {
@@ -130,7 +131,7 @@ v8::Handle<v8::Value> Binary::Construct(int length) {
     data_ = NULL;
   }
   if (length) {
-    data_ = static_cast<uint8_t*>(::calloc(length, sizeof(uint8_t)));
+    data_ = static_cast<char*>(::calloc(length, sizeof(char)));
     if (!data_) {
       char message[BUFSIZ];
       ::strerror_r(errno, message, BUFSIZ);
@@ -152,8 +153,8 @@ v8::Handle<v8::Value> Binary::Construct(v8::Handle<v8::Object> object) {
     if (!exception.IsEmpty()) {
       return handle_scope.Close(exception);
     }
-    uint8_t* data = GetData();
-    uint8_t* that_data = that->GetData();
+    char* data = GetData();
+    char* that_data = that->GetData();
     for (uint32_t index = 0; index < length; ++index) {
       data[index] = that_data[index];
     }
@@ -176,7 +177,7 @@ v8::Handle<v8::Value> Binary::Construct(v8::Handle<v8::Array> numbers) {
   if (!exception.IsEmpty()) {
     return handle_scope.Close(exception);
   }
-  uint8_t* data = GetData();
+  char* data = GetData();
   uint32_t index = 0;
   while (index < length) {
     v8::Local<v8::Value> index_value = properties->Get(index);
@@ -206,87 +207,23 @@ v8::Handle<v8::Value> Binary::Construct(v8::Handle<v8::Array> numbers) {
 v8::Handle<v8::Value> Binary::Construct(v8::Handle<v8::String> string,
     v8::Handle<v8::String> charset) {
   v8::HandleScope handle_scope;
-  iconv_t cd = ::iconv_open(*v8::String::Utf8Value(charset), "ASCII");
-  if ((iconv_t *)-1 == cd) {
-    if (EINVAL == errno) {
-      std::string message("Conversion from ASCII to ");
-      message.append(*v8::String::Utf8Value(charset));
-      message.append(" is not available");
-      return handle_scope.Close(v8::Exception::TypeError(
-            v8::String::New(message.c_str())));
-    }
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
+  std::string fromcode;
+  if (charset.IsEmpty()) {
+    fromcode.assign("UTF-8");
+  } else {
+    fromcode.assign(*v8::String::Utf8Value(charset));
   }
-  size_t size = string->Length() * sizeof(wchar_t);
-  size_t outbytesleft = size;
-  char* out_buffer = static_cast<char*>(::malloc(size));
-  if (!out_buffer) {
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
+  Iconv cd;
+  v8::Handle<v8::Value> value = cd.Convert(*v8::String::Utf8Value(string),
+      string->Length(), "UTF-8", fromcode.c_str());
+  if (!value.IsEmpty()) {
+    return handle_scope.Close(value);
   }
-  char* outbuf = out_buffer;
-  size_t inbytesleft = string->Length();
-  char* in_buffer = static_cast<char*>(::malloc(inbytesleft + 1));
-  if (!in_buffer) {
-    ::free(out_buffer);
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
-  }
-  memcpy(in_buffer, *v8::String::Utf8Value(string), inbytesleft);
-  char* inbuf = in_buffer;
-  int converted = ::iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
-  while (-1 == converted) {
-    if (EINVAL == errno) {
-      // Junk at the end of the buffer, ignore it
-      break;
-    } else if (E2BIG == errno) {
-      // Double the size of the output buffer
-      size *= 2;
-      char* new_buffer = static_cast<char*>(::realloc(out_buffer, size));
-      if (!new_buffer) {
-        ::free(out_buffer);
-        ::free(in_buffer);
-        char message[BUFSIZ];
-        ::strerror_r(errno, message, BUFSIZ);
-        return handle_scope.Close(v8::Exception::Error(
-              v8::String::New(message)));
-      }
-      outbytesleft = size;
-      out_buffer = outbuf = new_buffer;
-    } else {
-      // Unrecoverable error
-      ::free(out_buffer);
-      ::free(in_buffer);
-      char message[BUFSIZ];
-      ::strerror_r(errno, message, BUFSIZ);
-      return handle_scope.Close(v8::Exception::Error(
-            v8::String::New(message)));
-    }
-    inbytesleft = string->Length();
-    inbuf = in_buffer;
-    converted = ::iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
-  }
-  if (-1 == ::iconv_close(cd)) {
-    ::free(out_buffer);
-    ::free(in_buffer);
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
-  }
-  converted = inbuf - in_buffer; // Total number of characters converted
-  v8::Handle<v8::Value> exception = Construct(converted);
+  v8::Handle<v8::Value> exception = Construct(cd.GetLength());
   if (!exception.IsEmpty()) {
-    ::free(out_buffer);
-    ::free(in_buffer);
     return handle_scope.Close(exception);
   }
-  memcpy(GetData(), out_buffer, converted);
-  ::free(out_buffer);
-  ::free(in_buffer);
+  memcpy(GetData(), cd.GetData(), cd.GetLength());
   return handle_scope.Close(v8::Handle<v8::Value>());
 }
 
@@ -312,6 +249,8 @@ v8::Handle<v8::FunctionTemplate> Binary::GetTemplate() {
       LengthGet);
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toArray"),
       v8::FunctionTemplate::New(ToArray)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("decodeToString"),
+      v8::FunctionTemplate::New(DecodeToString)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -347,15 +286,53 @@ v8::Handle<v8::Value> Binary::ToArray(const v8::Arguments& arguments) {
     return handle_scope.Close(array);
   } else if (1 == arguments.Length()) {
     if (!arguments[0]->IsString()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must be a string"))));
+      return handle_scope.Close(v8::ThrowException(
+              v8::String::New("Argument one must be a string")));
     }
-    // TODO iconv
+    Iconv cd;
+    v8::Handle<v8::Value> value = cd.Convert(self->GetData(),
+        self->GetLength(), "UTF-8",
+        *v8::String::Utf8Value(arguments[0]->ToString()));
+    if (!value.IsEmpty()) {
+      return handle_scope.Close(v8::ThrowException(value));
+    }
+    v8::Local<v8::Array> array = v8::Array::New(cd.GetLength());
+    for (uint32_t index = 0; index < cd.GetLength(); ++index) {
+      array->Set(index, v8::Uint32::New(cd.GetData()[index]));
+    }
+    return handle_scope.Close(array);
   } else {
     return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
             v8::String::New("Zero or one argument allowed"))));
   }
-  return handle_scope.Close(v8::Handle<v8::Value>());
+}
+
+v8::Handle<v8::Value> Binary::DecodeToString(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  v8::Local<v8::Object> object = arguments.This();
+  v8::Local<v8::External> external =
+    v8::Local<v8::External>::Cast(object->GetInternalField(0));
+  Binary* self = static_cast<Binary*>(external->Value());
+  if (0 == arguments.Length()) {
+    return handle_scope.Close(v8::String::New(self->GetData(),
+          self->GetLength()));
+  } else if (1 == arguments.Length()) {
+    if (!arguments[0]->IsString()) {
+      return handle_scope.Close(v8::ThrowException(
+              v8::String::New("Argument one must be a string")));
+    }
+    Iconv cd;
+    v8::Handle<v8::Value> value = cd.Convert(self->GetData(),
+        self->GetLength(), "UTF-8",
+        *v8::String::Utf8Value(arguments[0]->ToString()));
+    if (!value.IsEmpty()) {
+      return handle_scope.Close(v8::ThrowException(value));
+    }
+    return handle_scope.Close(v8::String::New(cd.GetData(), cd.GetLength()));
+  } else {
+    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Zero or one argument allowed"))));
+  }
 }
 
 // ByteString
@@ -373,6 +350,10 @@ v8::Handle<v8::FunctionTemplate> ByteString::GetTemplate() {
       QueryIndex);
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("join"),
       v8::FunctionTemplate::New(Join)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toString"),
+      v8::FunctionTemplate::New(ToString)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toSource"),
+      v8::FunctionTemplate::New(ToSource)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -394,7 +375,17 @@ v8::Handle<v8::Value> ByteString::New(const v8::Arguments& arguments) {
   if (arguments.Length() == 0) {
     self = new ByteString;
   } else if (arguments.Length() == 1) {
-    if (arguments[0]->IsObject()) {
+    if (arguments[0]->IsString()) {
+      self = new ByteString;
+      if (self) {
+        v8::Handle<v8::Value> exception =
+          self->Construct(arguments[0]->ToString());
+        if (!exception.IsEmpty()) {
+          delete self;
+          return handle_scope.Close(v8::ThrowException(exception));
+        }
+      }
+    } else if (arguments[0]->IsObject()) {
       if (arguments[0]->IsArray()) {
         self = new ByteString;
         if (self) {
@@ -543,6 +534,37 @@ v8::Handle<v8::Value> ByteString::Join(const v8::Arguments& arguments) {
   return byte_string;
 }
 
+v8::Handle<v8::Value> ByteString::ToString(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  v8::Local<v8::Object> object = arguments.This();
+  v8::Local<v8::External> external =
+    v8::Local<v8::External>::Cast(object->GetInternalField(0));
+  Binary* self = static_cast<Binary*>(external->Value());
+  std::stringstream stream;
+  stream << "[ByteString ";
+  stream << self->GetLength();
+  stream << "]";
+  return handle_scope.Close(v8::String::New(stream.str().c_str()));
+}
+
+v8::Handle<v8::Value> ByteString::ToSource(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  v8::Local<v8::Object> object = arguments.This();
+  v8::Local<v8::External> external =
+    v8::Local<v8::External>::Cast(object->GetInternalField(0));
+  Binary* self = static_cast<Binary*>(external->Value());
+  std::stringstream stream;
+  stream << "ByteString([";
+  for (uint32_t index = 0; index < self->GetLength(); ++index) {
+    if (index) {
+      stream << ", ";
+    }
+    stream << static_cast<uint32_t>(self->Get(index));
+  }
+  stream << "])";
+  return handle_scope.Close(v8::String::New(stream.str().c_str()));
+}
+
 // ByteArray
 v8::Handle<v8::FunctionTemplate> ByteArray::GetTemplate() {
   v8::HandleScope handle_scope;
@@ -558,6 +580,10 @@ v8::Handle<v8::FunctionTemplate> ByteArray::GetTemplate() {
       Binary::LengthGet, LengthSet);
   templ->InstanceTemplate()->SetIndexedPropertyHandler(GetIndex, SetIndex,
       QueryIndex);
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toString"),
+      v8::FunctionTemplate::New(ToString)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toSource"),
+      v8::FunctionTemplate::New(ToSource)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -703,6 +729,125 @@ v8::Handle<v8::Integer> ByteArray::QueryIndex(uint32_t index,
     return handle_scope.Close(v8::Integer::New(v8::None));
   }
   return handle_scope.Close(v8::Handle<v8::Integer>());
+}
+
+v8::Handle<v8::Value> ByteArray::ToString(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  v8::Local<v8::Object> object = arguments.This();
+  v8::Local<v8::External> external =
+    v8::Local<v8::External>::Cast(object->GetInternalField(0));
+  Binary* self = static_cast<Binary*>(external->Value());
+  std::stringstream stream;
+  stream << "[ByteArray ";
+  stream << self->GetLength();
+  stream << "]";
+  return handle_scope.Close(v8::String::New(stream.str().c_str()));
+}
+
+v8::Handle<v8::Value> ByteArray::ToSource(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  v8::Local<v8::Object> object = arguments.This();
+  v8::Local<v8::External> external =
+    v8::Local<v8::External>::Cast(object->GetInternalField(0));
+  Binary* self = static_cast<Binary*>(external->Value());
+  std::stringstream stream;
+  stream << "ByteArray([";
+  for (uint32_t index = 0; index < self->GetLength(); ++index) {
+    if (index) {
+      stream << ", ";
+    }
+    stream << static_cast<uint32_t>(self->Get(index));
+  }
+  stream << "])";
+  return handle_scope.Close(v8::String::New(stream.str().c_str()));
+}
+
+// Iconv
+Iconv::Iconv()
+  : length_(0)
+  , data_(NULL) {}
+
+Iconv::~Iconv() {
+  if (data_) {
+    ::free(data_);
+  }
+}
+
+v8::Handle<v8::Value> Iconv::Convert(const char* data, uint32_t length,
+    const char* tocode, const char* fromcode) {
+  v8::HandleScope handle_scope;
+  iconv_t cd = ::iconv_open(tocode, fromcode);
+  if ((iconv_t *)-1 == cd) {
+    if (EINVAL == errno) {
+      std::string message("Conversion from ");
+      message.append(fromcode);
+      message.append(" to ");
+      message.append(tocode);
+      message.append(" is not available");
+      return handle_scope.Close(v8::Exception::TypeError(
+            v8::String::New(message.c_str())));
+    }
+    char message[BUFSIZ];
+    ::strerror_r(errno, message, BUFSIZ);
+    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
+  }
+  size_t size = length * sizeof(wchar_t);
+  size_t outbytesleft = size;
+  data_ = static_cast<char*>(::malloc(size));
+  if (!data_) {
+    char message[BUFSIZ];
+    ::strerror_r(errno, message, BUFSIZ);
+    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
+  }
+  char* outbuf = data_;
+  size_t inbytesleft = length;
+  char* in_buffer = static_cast<char*>(::malloc(inbytesleft + 1));
+  if (!in_buffer) {
+    char message[BUFSIZ];
+    ::strerror_r(errno, message, BUFSIZ);
+    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
+  }
+  memcpy(in_buffer, data, length);
+  char* inbuf = in_buffer;
+  int converted = ::iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
+  while (-1 == converted) {
+    if (EINVAL == errno) {
+      // Junk at the end of the buffer, ignore it
+      break;
+    } else if (E2BIG == errno) {
+      // Double the size of the output buffer
+      size *= 2;
+      char* new_buffer = static_cast<char*>(::realloc(data_, size));
+      if (!new_buffer) {
+        ::free(in_buffer);
+        char message[BUFSIZ];
+        ::strerror_r(errno, message, BUFSIZ);
+        return handle_scope.Close(v8::Exception::Error(
+              v8::String::New(message)));
+      }
+      outbytesleft = size;
+      data_ = outbuf = new_buffer;
+    } else {
+      // Unrecoverable error
+      ::free(in_buffer);
+      char message[BUFSIZ];
+      ::strerror_r(errno, message, BUFSIZ);
+      return handle_scope.Close(v8::Exception::Error(
+            v8::String::New(message)));
+    }
+    inbytesleft = length;
+    inbuf = in_buffer;
+    converted = ::iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
+  }
+  if (-1 == ::iconv_close(cd)) {
+    ::free(in_buffer);
+    char message[BUFSIZ];
+    ::strerror_r(errno, message, BUFSIZ);
+    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
+  }
+  length_ = outbuf - data_;
+  ::free(in_buffer);
+  return handle_scope.Close(v8::Handle<v8::Value>());
 }
 
 // Initialize module

@@ -35,6 +35,7 @@ namespace commonjs {
 class Binary;
 class ByteString;
 class ByteArray;
+class Iconv;
 
 } // namespace commonjs
 
@@ -46,19 +47,19 @@ public:
     return length_;
   }
 
-  uint8_t* GetData() {
+  char* GetData() {
     return data_;
   }
 
   v8::Handle<v8::Value> Resize(uint32_t size);
 
-  v8::Handle<v8::Value> Join(v8::Handle<v8::Array> array, uint8_t number);
+  v8::Handle<v8::Value> Join(v8::Handle<v8::Array> array, char number);
 
-  uint8_t Get(uint32_t index) const {
+  char Get(uint32_t index) const {
     return data_[index];
   }
 
-  void Set(uint32_t index, uint8_t value) {
+  void Set(uint32_t index, char value) {
     data_[index] = value;
   }
 
@@ -69,6 +70,8 @@ protected: // V8 interface methods
       const v8::AccessorInfo &info);
 
   static v8::Handle<v8::Value> ToArray(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> DecodeToString(const v8::Arguments& arguments);
 
 protected: // Protected methods
   Binary();
@@ -82,7 +85,7 @@ protected: // Protected methods
   virtual v8::Handle<v8::Value> Construct(v8::Handle<v8::Array> numbers);
 
   virtual v8::Handle<v8::Value> Construct(v8::Handle<v8::String> string,
-      v8::Handle<v8::String> charset);
+      v8::Handle<v8::String> charset = v8::Handle<v8::String>());
 
   virtual v8::Handle<v8::Value> Construct(v8::Handle<v8::Uint32> length);
 
@@ -94,7 +97,7 @@ private: // Private methods
 private: // Private data
   uint32_t size_;
   uint32_t length_;
-  uint8_t* data_;
+  char* data_;
 };
 
 class commonjs::ByteString: public commonjs::Binary {
@@ -116,6 +119,10 @@ protected: // V8 interface methods
       const v8::AccessorInfo &info);
 
   static v8::Handle<v8::Value> Join(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> ToSource(const v8::Arguments& arguments);
 
 private: // Private methods
   ByteString() {}
@@ -148,6 +155,10 @@ protected: // V8 interface methods
   static v8::Handle<v8::Integer> QueryIndex(uint32_t index,
       const v8::AccessorInfo &info);
 
+  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> ToSource(const v8::Arguments& arguments);
+
 private: // Private methods
   ByteArray() {}
 
@@ -156,6 +167,28 @@ private: // Private methods
   ByteArray(ByteArray const& that);
 
   void operator=(ByteArray const& that);
+};
+
+class commonjs::Iconv {
+public:
+  Iconv();
+
+  ~Iconv();
+
+  v8::Handle<v8::Value> Convert(const char* data, uint32_t length,
+      const char* tocode, const char* fromcode);
+
+  uint32_t GetLength() const {
+    return length_;
+  }
+
+  const char* GetData() const {
+    return data_;
+  }
+
+private:
+  uint32_t length_;
+  char* data_;
 };
 
 #endif // V8_COMMONJS_BINARY_H

@@ -34,61 +34,7 @@
 
 namespace commonjs {
 
-void LoggerPass(v8::Handle<v8::Value> self,
-    v8::Handle<v8::Value> message = v8::Handle<v8::Value>()) {
-  v8::HandleScope handle_scope;
-  if (self.IsEmpty()) {
-    return;
-  }
-  if (!self->IsObject()) {
-    return;
-  }
-  v8::Handle<v8::Value> pass =
-    self->ToObject()->Get(v8::String::NewSymbol("pass"));
-  if (pass.IsEmpty()) {
-    return;
-  }
-  if (!pass->IsFunction()) {
-    return;
-  }
-  v8::TryCatch try_catch;
-  if (message.IsEmpty()) {
-    v8::Function::Cast(*pass)->Call(pass->ToObject(), 0, NULL);
-  } else {
-    v8::Handle<v8::Value> argv[1] = { message };
-    v8::Function::Cast(*pass)->Call(pass->ToObject(), 1, argv);
-  }
-}
-
-void LoggerFail(v8::Handle<v8::Value> self, v8::Handle<v8::Value> exception,
-    v8::Handle<v8::Value> message = v8::Handle<v8::Value>()) {
-  v8::HandleScope handle_scope;
-  if (self.IsEmpty()) {
-    return;
-  }
-  if (!self->IsObject()) {
-    return;
-  }
-  v8::Handle<v8::Value> fail =
-    self->ToObject()->Get(v8::String::NewSymbol("fail"));
-  if (fail.IsEmpty()) {
-    return;
-  }
-  if (!fail->IsFunction()) {
-    return;
-  }
-  v8::TryCatch try_catch;
-  if (message.IsEmpty()) {
-    v8::Handle<v8::Value> argv[1] = { exception };
-    v8::Function::Cast(*fail)->Call(fail->ToObject(), 1, argv);
-  } else {
-    v8::Handle<v8::Value> argv[2] = { exception, message };
-    v8::Function::Cast(*fail)->Call(fail->ToObject(), 2, argv);
-  }
-}
-
-static v8::Handle<v8::Value> RealRun(v8::Handle<v8::Value> argument,
-    v8::Handle<v8::Value> logger) {
+static v8::Handle<v8::Value> RealRun(v8::Handle<v8::Value> argument) {
   v8::HandleScope handle_scope;
   v8::Local<v8::Object> tests;
   v8::TryCatch try_catch;
@@ -127,20 +73,15 @@ static v8::Handle<v8::Value> RealRun(v8::Handle<v8::Value> argument,
         if (value.IsEmpty()) {
           if (try_catch.HasCaught()) {
             ++failures;
-            LoggerFail(logger, try_catch.Exception(), property);
             if (!try_catch.CanContinue()) {
               return handle_scope.Close(try_catch.ReThrow());
             }
             try_catch.Reset();
-          } else {
-            LoggerPass(logger, property);
           }
-        } else {
-          LoggerPass(logger, property);
         }
       } else {
         // Run sub-tests
-        v8::Handle<v8::Value> value = RealRun(test, logger);
+        v8::Handle<v8::Value> value = RealRun(test);
         if (value->IsInt32()) {
           failures += value->ToNumber()->Value();
         } else {
@@ -159,11 +100,7 @@ static v8::Handle<v8::Value> Run(const v8::Arguments& arguments) {
     return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
             v8::String::New("One argument required"))));
   }
-  v8::Handle<v8::Value> logger;
-  if (1 < arguments.Length()) {
-    logger = arguments[1];
-  }
-  v8::Handle<v8::Value> value = RealRun(arguments[0], logger);
+  v8::Handle<v8::Value> value = RealRun(arguments[0]);
   if (value->IsInt32()) {
     return handle_scope.Close(value);
   } else {
