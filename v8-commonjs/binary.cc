@@ -30,15 +30,15 @@
 #endif
 
 #include <cerrno>
+#include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <iconv.h>
 #include <sstream>
 #include "v8-commonjs/binary.h"
+#include "v8-commonjs/iconv.h"
 
 namespace commonjs {
 
-// Binary
 Binary::Binary()
   : size_(0)
   , length_(0)
@@ -146,7 +146,7 @@ v8::Handle<v8::Value> Binary::Construct(int length) {
 
 v8::Handle<v8::Value> Binary::Construct(v8::Handle<v8::Object> object) {
   v8::HandleScope handle_scope;
-  if (Binary::GetTemplate()->HasInstance(object)) {
+  if (GetTemplate()->HasInstance(object)) {
     Binary* that = static_cast<Binary*>(object->GetPointerFromInternalField(0));
     uint32_t length = that->GetLength();
     v8::Handle<v8::Value> exception = Construct(length);
@@ -249,8 +249,26 @@ v8::Handle<v8::FunctionTemplate> Binary::GetTemplate() {
       LengthGet);
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toArray"),
       v8::FunctionTemplate::New(ToArray)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toString"),
+      v8::FunctionTemplate::New(ToString)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toSource"),
+      v8::FunctionTemplate::New(ToSource)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("decodeToString"),
       v8::FunctionTemplate::New(DecodeToString)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("indexOf"),
+      v8::FunctionTemplate::New(IndexOf)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("lastIndexOf"),
+      v8::FunctionTemplate::New(LastIndexOf)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("byteAt"),
+      v8::FunctionTemplate::New(ByteAt)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("valueAt"),
+      v8::FunctionTemplate::New(ByteAt)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("codeAt"),
+      v8::FunctionTemplate::New(CodeAt)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("get"),
+      v8::FunctionTemplate::New(CodeAt)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("split"),
+      v8::FunctionTemplate::New(Split)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -265,19 +283,15 @@ v8::Handle<v8::Value> Binary::New(const v8::Arguments& arguments) {
 v8::Handle<v8::Value> Binary::LengthGet(v8::Local<v8::String> property,
     const v8::AccessorInfo &info) {
   v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = info.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
+  Binary* self = static_cast<Binary*>(
+      info.This()->GetPointerFromInternalField(0));
   return handle_scope.Close(v8::Uint32::New(self->length_));
 }
 
 v8::Handle<v8::Value> Binary::ToArray(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = arguments.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
+  Binary* self = static_cast<Binary*>(
+      arguments.This()->GetPointerFromInternalField(0));
   if (0 == arguments.Length()) {
     v8::Local<v8::Array> array = v8::Array::New(self->GetLength());
     for (uint32_t index = 0; index < self->GetLength(); ++index) {
@@ -307,12 +321,40 @@ v8::Handle<v8::Value> Binary::ToArray(const v8::Arguments& arguments) {
   }
 }
 
+v8::Handle<v8::Value> Binary::ToString(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  Binary* self = static_cast<Binary*>(
+      arguments.This()->GetPointerFromInternalField(0));
+  std::stringstream stream;
+  stream << '[';
+  stream << *v8::String::Utf8Value(arguments.This()->GetConstructorName());
+  stream << ' ';
+  stream << self->GetLength();
+  stream << ']';
+  return handle_scope.Close(v8::String::New(stream.str().c_str()));
+}
+
+v8::Handle<v8::Value> Binary::ToSource(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  Binary* self = static_cast<Binary*>(
+      arguments.This()->GetPointerFromInternalField(0));
+  std::stringstream stream;
+  stream << *v8::String::Utf8Value(arguments.This()->GetConstructorName());
+  stream << "([";
+  for (uint32_t index = 0; index < self->GetLength(); ++index) {
+    if (index) {
+      stream << ", ";
+    }
+    stream << static_cast<uint32_t>(self->Get(index));
+  }
+  stream << "])";
+  return handle_scope.Close(v8::String::New(stream.str().c_str()));
+}
+
 v8::Handle<v8::Value> Binary::DecodeToString(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = arguments.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
+  Binary* self = static_cast<Binary*>(
+      arguments.This()->GetPointerFromInternalField(0));
   if (0 == arguments.Length()) {
     return handle_scope.Close(v8::String::New(self->GetData(),
           self->GetLength()));
@@ -335,537 +377,248 @@ v8::Handle<v8::Value> Binary::DecodeToString(const v8::Arguments& arguments) {
   }
 }
 
-// ByteString
-v8::Handle<v8::FunctionTemplate> ByteString::GetTemplate() {
+v8::Handle<v8::Value> Binary::IndexOf(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  static v8::Persistent<v8::FunctionTemplate> templ_;
-  if (!templ_.IsEmpty()) {
-    return templ_;
+  Binary* self = static_cast<Binary*>(
+      arguments.This()->GetPointerFromInternalField(0));
+  uint32_t start = 0, end = self->GetLength(), byte;
+  switch (arguments.Length()) {
+  case 3:
+    if (arguments[2]->ToUint32().IsEmpty()) {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument three must be an unsigned integer"))));
+    }
+    end = arguments[2]->ToUint32()->Value() + 1;
+    if (end > self->GetLength()) {
+      end = self->GetLength() - 1;
+    }
+    // Fall through
+  case 2:
+    if (arguments[1]->ToUint32().IsEmpty()) {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument two must be an unsigned integer"))));
+    }
+    start = arguments[1]->ToUint32()->Value();
+    if (start >= self->GetLength()) {
+      return handle_scope.Close(v8::Integer::New(-1));
+    }
+    // Fall through
+  case 1:
+    if (arguments[0]->IsObject()) {
+      v8::Handle<v8::Object> object = arguments[0]->ToObject();
+      if (!GetTemplate()->HasInstance(object)) {
+        return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+                v8::String::New("Argument one must be an unsigned integer, "
+                  "a ByteString or a ByteArray"))));
+      }
+      Binary* that = static_cast<Binary*>(
+          object->GetPointerFromInternalField(0));
+      for (uint32_t index = start; index < end; ++index) {
+        for (uint32_t j = 0; j < that->GetLength(); ++j) {
+          if (end < (index + j)) {
+            return handle_scope.Close(v8::Number::New(-1));
+          }
+          if (self->Get(index + j) != that->Get(j)) {
+            break;
+          }
+          if (that->GetLength() == (j + 1)) {
+            return handle_scope.Close(v8::Number::New(index));
+          }
+        }
+      }
+      return handle_scope.Close(v8::Number::New(-1));
+    } else if (!arguments[0]->ToUint32().IsEmpty()) {
+      byte = arguments[0]->ToUint32()->Value();
+      for (uint32_t index = start; index < end; ++index) {
+        uint32_t value = self->Get(index);
+        if (value == byte) {
+          return handle_scope.Close(v8::Number::New(index));
+        }
+      }
+      return handle_scope.Close(v8::Number::New(-1));
+    } else {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be an unsigned integer, "
+                "a ByteString or a ByteArray"))));
+    }
+  default:
+    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("One, two or three argument allowed"))));
   }
-  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
-  templ->InstanceTemplate()->SetInternalFieldCount(1);
-  templ->SetClassName(v8::String::NewSymbol("ByteString"));
-  templ->Inherit(Binary::GetTemplate());
-  templ->InstanceTemplate()->SetIndexedPropertyHandler(GetIndex, SetIndex,
-      QueryIndex);
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("join"),
-      v8::FunctionTemplate::New(Join)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toString"),
-      v8::FunctionTemplate::New(ToString)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toSource"),
-      v8::FunctionTemplate::New(ToSource)->GetFunction());
-  templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
-  return templ_;
 }
 
-v8::Handle<v8::Value> ByteString::New(const v8::Arguments& arguments) {
+v8::Handle<v8::Value> Binary::LastIndexOf(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  if (!arguments.IsConstructCall()) {
-    int argc = arguments.Length();
-    v8::Local<v8::Value>* argv = new v8::Local<v8::Value>[argc];
-    for (int i = 0; i < argc; ++i) {
-      argv[i] = arguments[i];
+  Binary* self = static_cast<Binary*>(
+      arguments.This()->GetPointerFromInternalField(0));
+  uint32_t start = self->GetLength() - 1, end = 0, byte;
+  switch (arguments.Length()) {
+  case 3:
+    if (arguments[2]->ToUint32().IsEmpty()) {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument three must be an unsigned integer"))));
     }
-    v8::Local<v8::Object> instance =
-      GetTemplate()->GetFunction()->NewInstance(argc, argv);
-    delete[] argv;
-    return handle_scope.Close(instance);
+    end = arguments[2]->ToUint32()->Value();
+    if (end >= self->GetLength()) {
+      return handle_scope.Close(v8::Number::New(-1));
+    }
+    // Fall through
+  case 2:
+    if (arguments[1]->ToUint32().IsEmpty()) {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument two must be an unsigned integer"))));
+    }
+    start = arguments[1]->ToUint32()->Value();
+    if (start >= self->GetLength()) {
+      start = self->GetLength() - 1;
+    }
+    // Fall through
+  case 1:
+    if (arguments[0]->IsObject()) {
+      v8::Handle<v8::Object> object = arguments[0]->ToObject();
+      if (!GetTemplate()->HasInstance(object)) {
+        return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+                v8::String::New("Argument one must be an unsigned integer, "
+                  "a ByteString or a ByteArray"))));
+      }
+      Binary* that = static_cast<Binary*>(
+          object->GetPointerFromInternalField(0));
+      for (uint32_t index = start; index >= end; --index) {
+        for (uint32_t j = 0; j < that->GetLength(); ++j) {
+          if (that->GetLength() > index) {
+            return handle_scope.Close(v8::Number::New(-1));
+          }
+          if (self->Get(index - that->GetLength() + j) != that->Get(j)) {
+            break;
+          }
+          if (that->GetLength() == (j + 1)) {
+            return handle_scope.Close(v8::Number::New(
+                  index - that->GetLength()));
+          }
+        }
+      }
+      return handle_scope.Close(v8::Number::New(-1));
+    } else if (!arguments[0]->ToUint32().IsEmpty()) {
+      byte = arguments[0]->ToUint32()->Value();
+      for (uint32_t index = start; index >= end; --index) {
+        if (static_cast<uint32_t>(self->Get(index)) == byte) {
+          return handle_scope.Close(v8::Number::New(index));
+        }
+      }
+      return handle_scope.Close(v8::Number::New(-1));
+    } else {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be an unsigned integer, "
+                "a ByteString or a ByteArray"))));
+    }
+  default:
+    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("One, two or three argument allowed"))));
   }
-  ByteString* self = NULL;
-  if (arguments.Length() == 0) {
-    self = new ByteString;
-  } else if (arguments.Length() == 1) {
-    if (arguments[0]->IsString()) {
-      self = new ByteString;
-      if (self) {
-        v8::Handle<v8::Value> exception =
-          self->Construct(arguments[0]->ToString());
-        if (!exception.IsEmpty()) {
-          delete self;
-          return handle_scope.Close(v8::ThrowException(exception));
-        }
-      }
-    } else if (arguments[0]->IsObject()) {
-      if (arguments[0]->IsArray()) {
-        self = new ByteString;
-        if (self) {
-          v8::Handle<v8::Value> exception = 
-            self->Construct(v8::Handle<v8::Array>::Cast(arguments[0]));
-          if (!exception.IsEmpty()) {
-            delete self;
-            return handle_scope.Close(v8::ThrowException(exception));
-          }
-        }
-      } else {
-        self = new ByteString;
-        if (self) {
-          v8::Handle<v8::Value> exception = 
-            self->Construct(v8::Handle<v8::Object>::Cast(arguments[0]));
-          if (!exception.IsEmpty()) {
-            delete self;
-            return handle_scope.Close(v8::ThrowException(exception));
-          }
-        }
-      }
-    }
-  } else if (arguments.Length() == 2) {
-    if (arguments[0]->IsString() && arguments[1]->IsString()) {
-      self = new ByteString;
-      if (self) {
-        v8::Handle<v8::Value> exception = 
-          self->Construct(arguments[0]->ToString(), arguments[1]->ToString());
-        if (!exception.IsEmpty()) {
-          delete self;
-          return handle_scope.Close(v8::ThrowException(exception));
-        }
+}
+
+v8::Handle<v8::Value> Binary::CodeAt(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  switch (arguments.Length()) {
+  case 1:
+    if (!arguments[0]->ToUint32().IsEmpty()) {
+      Binary* self = static_cast<Binary*>(
+          arguments.This()->GetPointerFromInternalField(0));
+      uint32_t index = arguments[0]->ToUint32()->Value();
+      if (index < self->GetLength()) {
+        return handle_scope.Close(v8::Number::New(self->Get(index)));
       }
     } else {
       return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one and two must be of type String"))));
+              v8::String::New("Argument one must be an unsigned integer"))));
     }
-  } else {
+    return handle_scope.Close(v8::Undefined());
+  default:
+    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("One argument allowed"))));
+  }
+}
+
+v8::Handle<v8::Value> Binary::ByteAt(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  switch (arguments.Length()) {
+  case 1:
+    if (!arguments[0]->ToUint32().IsEmpty()) {
+      Binary* self = static_cast<Binary*>(
+          arguments.This()->GetPointerFromInternalField(0));
+      uint32_t index = arguments[0]->ToUint32()->Value();
+      if (index >= self->GetLength()) {
+        return handle_scope.Close(v8::Undefined());
+      }
+      v8::Local<v8::Array> array = v8::Array::New(1);
+      array->Set(0, v8::Uint32::New(self->Get(index)));
+      v8::Handle<v8::Value> argv[1] = { array };
+      return handle_scope.Close(GetTemplate()->GetFunction()->
+          NewInstance(1, argv));
+    }
     return handle_scope.Close(v8::ThrowException(
-          v8::String::New("Zero, one, or two arguments allowed")));
+          v8::String::New("Argument one must be an unsigned integer")));
+  default:
+    return handle_scope.Close(v8::ThrowException(
+          v8::String::New("One argument allowed")));
   }
-  if (!self) {
-    return handle_scope.Close(v8::ThrowException(v8::String::New("No memory")));
-  }
-  v8::Persistent<v8::Object> byte_string =
-    v8::Persistent<v8::Object>::New(arguments.This());
-  byte_string->SetInternalField(0, v8::External::New(self));
-  byte_string.MakeWeak(static_cast<void*>(self), Delete);
-  return byte_string;
 }
 
-void ByteString::Delete(v8::Persistent<v8::Value> object, void* parameters) {
-  delete static_cast<ByteString*>(parameters);
-  object.Dispose();
-  object.Clear();
-}
-
-v8::Handle<v8::Value> ByteString::GetIndex(uint32_t index,
-    const v8::AccessorInfo &info) {
+v8::Handle<v8::Value> Binary::Split(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = info.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  if (index >= self->GetLength()) {
-    return handle_scope.Close(v8::Exception::RangeError(
-          v8::String::New("Index is out of range")));
-  }
-  return handle_scope.Close(v8::Integer::New(self->Get(index)));
-}
-
-v8::Handle<v8::Value> ByteString::SetIndex(uint32_t index,
-    v8::Local<v8::Value> value, const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
-  return handle_scope.Close(v8::Handle<v8::Value>());
-}
-
-v8::Handle<v8::Integer> ByteString::QueryIndex(uint32_t index,
-    const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = info.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  if (index < self->GetLength()) {
-    return handle_scope.Close(v8::Integer::New(v8::None));
-  }
-  return handle_scope.Close(v8::Handle<v8::Integer>());
-}
-
-v8::Handle<v8::Value> ByteString::Join(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  ByteString* that = NULL;
-  v8::Local<v8::Object> object = arguments.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  if (1 == arguments.Length()) {
-    if (!arguments[0]->IsArray()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must be of type Array"))));
-    }
-    that = new ByteString;
-    if (that) {
-      v8::Handle<v8::Value> exception = 
-        that->Construct(v8::Handle<v8::Array>::Cast(arguments[0]));
-      if (!exception.IsEmpty()) {
-        delete that;
-        return handle_scope.Close(v8::ThrowException(exception));
+  /*
+  Binary* self = static_cast<Binary*>(
+      arguments.This()->GetPointerFromInternalField(0));
+  */
+  int32_t count = UINT_MAX;
+  bool include_delimiter = false;
+  switch (arguments.Length()) {
+  case 2:
+    if (arguments[1]->IsObject()) {
+      v8::Handle<v8::Object> options = arguments[1]->ToObject();
+      v8::Handle<v8::Value> count_value =
+        options->Get(v8::String::NewSymbol("count"));
+      if (!count_value.IsEmpty()) {
+        if (!count_value->ToInteger().IsEmpty()) {
+          count = count_value->ToInteger()->Value();
+        }
       }
-    }
-  } else if (2 == arguments.Length()) {
-    if (!arguments[0]->IsArray()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must be of type Array"))));
-    }
-    if (!arguments[1]->IsUint32()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument must be an unsigned integer"))));
-    }
-    uint32_t number = arguments[1]->ToUint32()->Value();
-    if (number > 255) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument must be in the range [0..255]"))));
-    }
-    that = new ByteString;
-    if (that) {
-      v8::Handle<v8::Value> exception =
-        that->Binary::Join(v8::Handle<v8::Array>::Cast(arguments[0]), number);
-      if (!exception.IsEmpty()) {
-        delete that;
-        return handle_scope.Close(v8::ThrowException(exception));
+      v8::Handle<v8::Value> include_delimiter_value =
+        options->Get(v8::String::NewSymbol("includeDelimiter"));
+      if (!include_delimiter_value.IsEmpty()) {
+        if (!include_delimiter_value->ToBoolean().IsEmpty()) {
+          include_delimiter = include_delimiter_value->ToBoolean()->Value();
+        }
       }
+    } else {
+      return handle_scope.Close(v8::ThrowException(
+            v8::String::New("Argument two must be an object")));
     }
-  } else {
+    // Fall through
+  case 1:
+    if (arguments[0]->IsObject()) {
+      v8::Handle<v8::Object> object = arguments[0]->ToObject();
+      if (object->IsArray()) {
+        v8::Array* array = v8::Array::Cast(*object);
+        for (uint32_t index = 0; index < array->Length(); ++index) {
+          // TODO
+        }
+      } else if (GetTemplate()->HasInstance(object)) {
+        // TODO
+      }
+    } else if (!arguments[0]->ToUint32().IsEmpty()) {
+      //uint32_t delimiter = arguments[0]->ToUint32()->Value();
+      // TODO
+    }
+    return handle_scope.Close(v8::ThrowException(
+        v8::String::New("Argument one must be a Number, Array, "
+          "ByteString or ByteArray")));
+  default:
     return handle_scope.Close(v8::ThrowException(
           v8::String::New("One or two arguments allowed")));
   }
-  if (!that) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("No memory")));
-  }
-  v8::Persistent<v8::Object> byte_string =
-    v8::Persistent<v8::Object>::New(arguments.This());
-  byte_string->SetInternalField(0, v8::External::New(that));
-  byte_string.MakeWeak(static_cast<void*>(that), Delete);
-  return byte_string;
-}
-
-v8::Handle<v8::Value> ByteString::ToString(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = arguments.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  std::stringstream stream;
-  stream << "[ByteString ";
-  stream << self->GetLength();
-  stream << "]";
-  return handle_scope.Close(v8::String::New(stream.str().c_str()));
-}
-
-v8::Handle<v8::Value> ByteString::ToSource(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = arguments.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  std::stringstream stream;
-  stream << "ByteString([";
-  for (uint32_t index = 0; index < self->GetLength(); ++index) {
-    if (index) {
-      stream << ", ";
-    }
-    stream << static_cast<uint32_t>(self->Get(index));
-  }
-  stream << "])";
-  return handle_scope.Close(v8::String::New(stream.str().c_str()));
-}
-
-// ByteArray
-v8::Handle<v8::FunctionTemplate> ByteArray::GetTemplate() {
-  v8::HandleScope handle_scope;
-  static v8::Persistent<v8::FunctionTemplate> templ_;
-  if (!templ_.IsEmpty()) {
-    return templ_;
-  }
-  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
-  templ->InstanceTemplate()->SetInternalFieldCount(1);
-  templ->SetClassName(v8::String::NewSymbol("ByteArray"));
-  templ->Inherit(Binary::GetTemplate());
-  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("length"),
-      Binary::LengthGet, LengthSet);
-  templ->InstanceTemplate()->SetIndexedPropertyHandler(GetIndex, SetIndex,
-      QueryIndex);
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toString"),
-      v8::FunctionTemplate::New(ToString)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toSource"),
-      v8::FunctionTemplate::New(ToSource)->GetFunction());
-  templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
-  return templ_;
-}
-
-v8::Handle<v8::Value> ByteArray::New(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (!arguments.IsConstructCall()) {
-    int argc = arguments.Length();
-    v8::Local<v8::Value>* argv = new v8::Local<v8::Value>[argc];
-    for (int i = 0; i < argc; ++i) {
-      argv[i] = arguments[i];
-    }
-    v8::Local<v8::Object> instance =
-      GetTemplate()->GetFunction()->NewInstance(argc, argv);
-    delete[] argv;
-    return handle_scope.Close(instance);
-  }
-  ByteArray* self = NULL;
-  if (arguments.Length() == 0) {
-    self = new ByteArray;
-  } else if (arguments.Length() == 1) {
-    if (arguments[0]->IsUint32()) {
-      self = new ByteArray;
-      if (self) {
-        v8::Handle<v8::Value> exception =
-          self->Construct(arguments[0]->ToUint32());
-      }
-    } else if (arguments[0]->IsObject()) {
-      if (arguments[0]->IsArray()) {
-        self = new ByteArray;
-        if (self) {
-          v8::Handle<v8::Value> exception = 
-            self->Construct(v8::Handle<v8::Array>::Cast(arguments[0]));
-          if (!exception.IsEmpty()) {
-            delete self;
-            return handle_scope.Close(v8::ThrowException(exception));
-          }
-        }
-      } else {
-        self = new ByteArray;
-        if (self) {
-          v8::Handle<v8::Value> exception = 
-            self->Construct(v8::Handle<v8::Object>::Cast(arguments[0]));
-          if (!exception.IsEmpty()) {
-            delete self;
-            return handle_scope.Close(v8::ThrowException(exception));
-          }
-        }
-      }
-    }
-  } else if (arguments.Length() == 2) {
-    if (arguments[0]->IsString() && arguments[1]->IsString()) {
-      self = new ByteArray;
-      if (self) {
-        v8::Handle<v8::Value> exception = 
-          self->Construct(arguments[0]->ToString(), arguments[1]->ToString());
-        if (!exception.IsEmpty()) {
-          delete self;
-          return handle_scope.Close(v8::ThrowException(exception));
-        }
-      }
-    } else {
-      return handle_scope.Close(v8::ThrowException(v8::String::New(
-              "Argument one and two must be of type String")));
-    }
-  } else {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("Zero, one, or two arguments allowed")));
-  }
-  if (!self) {
-    return handle_scope.Close(v8::ThrowException(v8::String::New("No memory")));
-  }
-  v8::Persistent<v8::Object> byte_string =
-    v8::Persistent<v8::Object>::New(arguments.This());
-  byte_string->SetInternalField(0, v8::External::New(self));
-  byte_string.MakeWeak(static_cast<void*>(self), Delete);
-  return byte_string;
-}
-
-void ByteArray::Delete(v8::Persistent<v8::Value> object, void* parameters) {
-  delete static_cast<ByteArray*>(parameters);
-  object.Dispose();
-  object.Clear();
-}
-
-void ByteArray::LengthSet(v8::Local<v8::String> property,
-    v8::Local<v8::Value> value, const v8::AccessorInfo& info) {
-  v8::HandleScope handle_scope;
-  if (value->Uint32Value()) {
-    v8::Local<v8::Object> object = info.This();
-    v8::Local<v8::External> external =
-      v8::Local<v8::External>::Cast(object->GetInternalField(0));
-    Binary* self = static_cast<Binary*>(external->Value());
-    self->Resize(value->ToUint32()->Value());
-  }
-}
-
-v8::Handle<v8::Value> ByteArray::GetIndex(uint32_t index,
-    const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = info.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  if (index >= self->GetLength()) {
-    return handle_scope.Close(v8::Undefined());
-  }
-  return handle_scope.Close(v8::Integer::New(self->Get(index)));
-}
-
-v8::Handle<v8::Value> ByteArray::SetIndex(uint32_t index,
-    v8::Local<v8::Value> value, const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = info.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  if (index >= self->GetLength()) {
-    v8::Handle<v8::Value> exception = self->Resize(index + 1);
-    if (!exception.IsEmpty()) {
-      return handle_scope.Close(v8::Undefined());
-    }
-  }
-  if (!value->IsUint32()) {
-    return handle_scope.Close(v8::Undefined());
-  }
-  uint32_t number = value->Uint32Value();
-  if (number > 255) {
-    return handle_scope.Close(v8::Undefined());
-  }
-  self->Set(index, number);
-  return handle_scope.Close(value);;
-}
-
-v8::Handle<v8::Integer> ByteArray::QueryIndex(uint32_t index,
-    const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = info.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  if (index < self->GetLength()) {
-    return handle_scope.Close(v8::Integer::New(v8::None));
-  }
-  return handle_scope.Close(v8::Handle<v8::Integer>());
-}
-
-v8::Handle<v8::Value> ByteArray::ToString(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = arguments.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  std::stringstream stream;
-  stream << "[ByteArray ";
-  stream << self->GetLength();
-  stream << "]";
-  return handle_scope.Close(v8::String::New(stream.str().c_str()));
-}
-
-v8::Handle<v8::Value> ByteArray::ToSource(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  v8::Local<v8::Object> object = arguments.This();
-  v8::Local<v8::External> external =
-    v8::Local<v8::External>::Cast(object->GetInternalField(0));
-  Binary* self = static_cast<Binary*>(external->Value());
-  std::stringstream stream;
-  stream << "ByteArray([";
-  for (uint32_t index = 0; index < self->GetLength(); ++index) {
-    if (index) {
-      stream << ", ";
-    }
-    stream << static_cast<uint32_t>(self->Get(index));
-  }
-  stream << "])";
-  return handle_scope.Close(v8::String::New(stream.str().c_str()));
-}
-
-// Iconv
-Iconv::Iconv()
-  : length_(0)
-  , data_(NULL) {}
-
-Iconv::~Iconv() {
-  if (data_) {
-    ::free(data_);
-  }
-}
-
-v8::Handle<v8::Value> Iconv::Convert(const char* data, uint32_t length,
-    const char* tocode, const char* fromcode) {
-  v8::HandleScope handle_scope;
-  iconv_t cd = ::iconv_open(tocode, fromcode);
-  if ((iconv_t *)-1 == cd) {
-    if (EINVAL == errno) {
-      std::string message("Conversion from ");
-      message.append(fromcode);
-      message.append(" to ");
-      message.append(tocode);
-      message.append(" is not available");
-      return handle_scope.Close(v8::Exception::TypeError(
-            v8::String::New(message.c_str())));
-    }
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
-  }
-  size_t size = length * sizeof(wchar_t);
-  size_t outbytesleft = size;
-  data_ = static_cast<char*>(::malloc(size));
-  if (!data_) {
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
-  }
-  char* outbuf = data_;
-  size_t inbytesleft = length;
-  char* in_buffer = static_cast<char*>(::malloc(inbytesleft + 1));
-  if (!in_buffer) {
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
-  }
-  memcpy(in_buffer, data, length);
-  char* inbuf = in_buffer;
-  int converted = ::iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
-  while (-1 == converted) {
-    if (EINVAL == errno) {
-      // Junk at the end of the buffer, ignore it
-      break;
-    } else if (E2BIG == errno) {
-      // Double the size of the output buffer
-      size *= 2;
-      char* new_buffer = static_cast<char*>(::realloc(data_, size));
-      if (!new_buffer) {
-        ::free(in_buffer);
-        char message[BUFSIZ];
-        ::strerror_r(errno, message, BUFSIZ);
-        return handle_scope.Close(v8::Exception::Error(
-              v8::String::New(message)));
-      }
-      outbytesleft = size;
-      data_ = outbuf = new_buffer;
-    } else {
-      // Unrecoverable error
-      ::free(in_buffer);
-      char message[BUFSIZ];
-      ::strerror_r(errno, message, BUFSIZ);
-      return handle_scope.Close(v8::Exception::Error(
-            v8::String::New(message)));
-    }
-    inbytesleft = length;
-    inbuf = in_buffer;
-    converted = ::iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
-  }
-  if (-1 == ::iconv_close(cd)) {
-    ::free(in_buffer);
-    char message[BUFSIZ];
-    ::strerror_r(errno, message, BUFSIZ);
-    return handle_scope.Close(v8::Exception::Error(v8::String::New(message)));
-  }
-  length_ = outbuf - data_;
-  ::free(in_buffer);
-  return handle_scope.Close(v8::Handle<v8::Value>());
-}
-
-// Initialize module
-static bool BinaryInitialize(Module& module, int* argc, char*** argv)
-{
-  v8::HandleScope handle_scope;
-  v8::Handle<v8::Object> exports = module.GetExports();
-  exports->Set(v8::String::NewSymbol("Binary"),
-      Binary::GetTemplate()->GetFunction());
-  exports->Set(v8::String::NewSymbol("ByteString"),
-      ByteString::GetTemplate()->GetFunction());
-  exports->Set(v8::String::NewSymbol("ByteArray"),
-      ByteArray::GetTemplate()->GetFunction());
-  return true;
 }
 
 } // namespace commonjs
-
-COMMONJS_MODULE(commonjs::BinaryInitialize)
 
 // vim: tabstop=2:sw=2:expandtab

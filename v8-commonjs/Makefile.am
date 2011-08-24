@@ -15,6 +15,7 @@ libv8_commonjs_la_SOURCES = \
 	so-module.h
 libv8_commonjs_la_CPPFLAGS = \
 	-I$(top_srcdir) \
+	-I$(top_builddir) \
 	-DLIBDIR=\"$(libdir)\"
 libv8_commonjs_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
@@ -29,15 +30,22 @@ assert_la_SOURCES = \
 	assert.cc \
 	assert.h
 binary_la_SOURCES = \
+	binary/byte-array.cc \
+	binary/byte-array.h \
+	binary/byte-string.cc \
+	binary/byte-string.h \
+	binary/module.cc \
 	binary.cc \
-	binary.h
+	binary.h \
+	iconv.cc \
+	iconv.h
 system_la_SOURCES = \
 	system.cc \
 	system.h
 test_la_SOURCES = \
 	test.cc
 # Module flags
-AM_CPPFLAGS = -I$(top_srcdir)
+AM_CPPFLAGS = -I$(top_srcdir) -I$(top_builddir)
 AM_LDFLAGS = \
 	-avoid-version \
 	-module \

@@ -20,7 +20,7 @@
 // OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
 // SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
 // LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTBINARYN) HOWEVER CAUSED AND ON ANY
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -33,9 +33,6 @@
 namespace commonjs {
 
 class Binary;
-class ByteString;
-class ByteArray;
-class Iconv;
 
 } // namespace commonjs
 
@@ -71,7 +68,21 @@ protected: // V8 interface methods
 
   static v8::Handle<v8::Value> ToArray(const v8::Arguments& arguments);
 
+  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> ToSource(const v8::Arguments& arguments);
+
   static v8::Handle<v8::Value> DecodeToString(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> IndexOf(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> LastIndexOf(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> CodeAt(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> ByteAt(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Split(const v8::Arguments& arguments);
 
 protected: // Protected methods
   Binary();
@@ -96,97 +107,6 @@ private: // Private methods
 
 private: // Private data
   uint32_t size_;
-  uint32_t length_;
-  char* data_;
-};
-
-class commonjs::ByteString: public commonjs::Binary {
-public:
-  static v8::Handle<v8::FunctionTemplate> GetTemplate();
-
-protected: // V8 interface methods
-  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
-
-  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
-
-  static v8::Handle<v8::Value> GetIndex(uint32_t index,
-      const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Value> SetIndex(uint32_t index,
-      v8::Local<v8::Value> value, const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Integer> QueryIndex(uint32_t index,
-      const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Value> Join(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> ToSource(const v8::Arguments& arguments);
-
-private: // Private methods
-  ByteString() {}
-
-  ~ByteString() {}
-
-  ByteString(ByteString const& that);
-
-  void operator=(ByteString const& that);
-};
-
-class commonjs::ByteArray: public commonjs::Binary {
-public:
-  static v8::Handle<v8::FunctionTemplate> GetTemplate();
-
-protected: // V8 interface methods
-  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
-
-  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
-
-  static void LengthSet(v8::Local<v8::String> property,
-      v8::Local<v8::Value> value, const v8::AccessorInfo& info);
-
-  static v8::Handle<v8::Value> GetIndex(uint32_t index,
-      const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Value> SetIndex(uint32_t index,
-      v8::Local<v8::Value> value, const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Integer> QueryIndex(uint32_t index,
-      const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> ToSource(const v8::Arguments& arguments);
-
-private: // Private methods
-  ByteArray() {}
-
-  ~ByteArray() {}
-
-  ByteArray(ByteArray const& that);
-
-  void operator=(ByteArray const& that);
-};
-
-class commonjs::Iconv {
-public:
-  Iconv();
-
-  ~Iconv();
-
-  v8::Handle<v8::Value> Convert(const char* data, uint32_t length,
-      const char* tocode, const char* fromcode);
-
-  uint32_t GetLength() const {
-    return length_;
-  }
-
-  const char* GetData() const {
-    return data_;
-  }
-
-private:
   uint32_t length_;
   char* data_;
 };

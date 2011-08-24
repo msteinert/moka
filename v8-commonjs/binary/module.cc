@@ -29,26 +29,28 @@
 #include "config.h"
 #endif
 
-#include <cstdio>
+#include "v8-commonjs/binary/byte-array.h"
+#include "v8-commonjs/binary/byte-string.h"
 #include "v8-commonjs/module.h"
 
-static v8::Handle<v8::Value> SayHi(const v8::Arguments& /* args */) {
-  v8::HandleScope handle_scope;
-  ::printf("Foo says hello!\n");
-  return v8::Handle<v8::Value>();
-}
+namespace commonjs {
 
-static bool foo_initialize(commonjs::Module& module,
-    int* /* argc */, char*** /* argv */)
+// Initialize module
+static bool BinaryInitialize(Module& module, int* argc, char*** argv)
 {
   v8::HandleScope handle_scope;
   v8::Handle<v8::Object> exports = module.GetExports();
-  v8::Local<v8::FunctionTemplate> say_hi_templ =
-    v8::FunctionTemplate::New(SayHi);
-  exports->Set(v8::String::New("sayHi"), say_hi_templ->GetFunction());
+  exports->Set(v8::String::NewSymbol("Binary"),
+      Binary::GetTemplate()->GetFunction());
+  exports->Set(v8::String::NewSymbol("ByteString"),
+      ByteString::GetTemplate()->GetFunction());
+  exports->Set(v8::String::NewSymbol("ByteArray"),
+      ByteArray::GetTemplate()->GetFunction());
   return true;
 }
 
-COMMONJS_MODULE(foo_initialize)
+} // namespace commonjs
+
+COMMONJS_MODULE(commonjs::BinaryInitialize)
 
 // vim: tabstop=2:sw=2:expandtab

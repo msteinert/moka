@@ -25,30 +25,49 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef V8_COMMONJS_BINARY_BYTE_STRING_H
+#define V8_COMMONJS_BINARY_BYTE_STRING_H
 
-#include <cstdio>
-#include "v8-commonjs/module.h"
+#include "v8-commonjs/binary.h"
 
-static v8::Handle<v8::Value> SayHi(const v8::Arguments& /* args */) {
-  v8::HandleScope handle_scope;
-  ::printf("Bar says hello!\n");
-  return v8::Handle<v8::Value>();
-}
+namespace commonjs {
 
-static bool bar_initialize(commonjs::Module& module,
-    int* /* argc */, char*** /* argv */)
-{
-  v8::HandleScope handle_scope;
-  v8::Handle<v8::Object> exports = module.GetExports();
-  v8::Local<v8::FunctionTemplate> say_hi_templ =
-    v8::FunctionTemplate::New(SayHi);
-  exports->Set(v8::String::New("sayHi"), say_hi_templ->GetFunction());
-  return true;
-}
+class ByteString;
 
-COMMONJS_MODULE(bar_initialize)
+} // namespace commonjs
+
+class commonjs::ByteString: public commonjs::Binary {
+public:
+  static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+protected: // V8 interface methods
+  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+
+  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
+
+  static v8::Handle<v8::Value> GetIndex(uint32_t index,
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> SetIndex(uint32_t index,
+      v8::Local<v8::Value> value, const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Integer> QueryIndex(uint32_t index,
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> Join(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Get(const v8::Arguments& arguments);
+
+private: // Private methods
+  ByteString() {}
+
+  ~ByteString() {}
+
+  ByteString(ByteString const& that);
+
+  void operator=(ByteString const& that);
+};
+
+#endif // V8_COMMONJS_BINARY_BYTE_STRING_H
 
 // vim: tabstop=2:sw=2:expandtab
