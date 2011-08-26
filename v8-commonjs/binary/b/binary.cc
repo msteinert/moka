@@ -30,11 +30,10 @@
 #endif
 
 #include <cerrno>
-#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
-#include "v8-commonjs/binary.h"
+#include "v8-commonjs/binary/b/binary.h"
 #include "v8-commonjs/iconv.h"
 
 namespace commonjs {
@@ -119,6 +118,76 @@ v8::Handle<v8::Value> Binary::Join(v8::Handle<v8::Array> array,
       }
     }
   }
+  return handle_scope.Close(v8::Handle<v8::Value>());
+}
+
+v8::Handle<v8::Value> Binary::Split(char value,
+    v8::Handle<v8::Function> construct, uint32_t count,
+    bool include_delimiter) {
+  v8::HandleScope handle_scope;
+  v8::Handle<v8::Array> split = v8::Array::New();
+  char* current = data_;
+  for (uint32_t index = 0; index < length_; ++index) {
+    if (data_[index] == value) {
+      v8::Handle<v8::Value> binary = construct->NewInstance();
+      Binary* that = static_cast<Binary*>(
+          binary->ToObject()->GetPointerFromInternalField(0));
+      v8::Handle<v8::Value> value = that->Resize(index - (current - data_));
+      if (!value.IsEmpty()) {
+        return handle_scope.Close(v8::ThrowException(value));
+      }
+      ::memcpy(that->data_, current, that->length_);
+      split->Set(split->Length(), binary);
+      if (split->Length() == count - 1) {
+        ++current;
+        break;
+      }
+      current += that->length_;
+      if (include_delimiter) {
+        v8::Handle<v8::Value> binary = construct->NewInstance();
+        Binary* that = static_cast<Binary*>(
+            binary->ToObject()->GetPointerFromInternalField(0));
+        v8::Handle<v8::Value> value = that->Resize(1);
+        if (!value.IsEmpty()) {
+          return handle_scope.Close(v8::ThrowException(value));
+        }
+        that->data_[0] = *current;
+        split->Set(split->Length(), binary);
+        if (split->Length() == count - 1) {
+          ++current;
+          break;
+        }
+      }
+      ++current;
+    }
+  }
+  if (split->Length() < count) {
+    if (current < data_ + length_) {
+      v8::Handle<v8::Value> binary = construct->NewInstance();
+      Binary* that = static_cast<Binary*>(
+          binary->ToObject()->GetPointerFromInternalField(0));
+      v8::Handle<v8::Value> value = that->Resize((data_ + length_) - current);
+      if (!value.IsEmpty()) {
+        return handle_scope.Close(v8::ThrowException(value));
+      }
+      ::memcpy(that->data_, current, that->length_);
+      split->Set(split->Length(), binary);
+    }
+  }
+  return handle_scope.Close(split);
+}
+
+v8::Handle<v8::Value> Binary::Split(Binary* that,
+    v8::Handle<v8::Function> construct, uint32_t count,
+    bool include_delimiter) {
+  v8::HandleScope handle_scope;
+  return handle_scope.Close(v8::Handle<v8::Value>());
+}
+
+v8::Handle<v8::Value> Binary::Split(v8::Array* array,
+    v8::Handle<v8::Function> construct, uint32_t count,
+    bool include_delimiter) {
+  v8::HandleScope handle_scope;
   return handle_scope.Close(v8::Handle<v8::Value>());
 }
 
@@ -267,8 +336,6 @@ v8::Handle<v8::FunctionTemplate> Binary::GetTemplate() {
       v8::FunctionTemplate::New(CodeAt)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("get"),
       v8::FunctionTemplate::New(CodeAt)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("split"),
-      v8::FunctionTemplate::New(Split)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -561,61 +628,6 @@ v8::Handle<v8::Value> Binary::ByteAt(const v8::Arguments& arguments) {
   default:
     return handle_scope.Close(v8::ThrowException(
           v8::String::New("One argument allowed")));
-  }
-}
-
-v8::Handle<v8::Value> Binary::Split(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  /*
-  Binary* self = static_cast<Binary*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  */
-  int32_t count = UINT_MAX;
-  bool include_delimiter = false;
-  switch (arguments.Length()) {
-  case 2:
-    if (arguments[1]->IsObject()) {
-      v8::Handle<v8::Object> options = arguments[1]->ToObject();
-      v8::Handle<v8::Value> count_value =
-        options->Get(v8::String::NewSymbol("count"));
-      if (!count_value.IsEmpty()) {
-        if (!count_value->ToInteger().IsEmpty()) {
-          count = count_value->ToInteger()->Value();
-        }
-      }
-      v8::Handle<v8::Value> include_delimiter_value =
-        options->Get(v8::String::NewSymbol("includeDelimiter"));
-      if (!include_delimiter_value.IsEmpty()) {
-        if (!include_delimiter_value->ToBoolean().IsEmpty()) {
-          include_delimiter = include_delimiter_value->ToBoolean()->Value();
-        }
-      }
-    } else {
-      return handle_scope.Close(v8::ThrowException(
-            v8::String::New("Argument two must be an object")));
-    }
-    // Fall through
-  case 1:
-    if (arguments[0]->IsObject()) {
-      v8::Handle<v8::Object> object = arguments[0]->ToObject();
-      if (object->IsArray()) {
-        v8::Array* array = v8::Array::Cast(*object);
-        for (uint32_t index = 0; index < array->Length(); ++index) {
-          // TODO
-        }
-      } else if (GetTemplate()->HasInstance(object)) {
-        // TODO
-      }
-    } else if (!arguments[0]->ToUint32().IsEmpty()) {
-      //uint32_t delimiter = arguments[0]->ToUint32()->Value();
-      // TODO
-    }
-    return handle_scope.Close(v8::ThrowException(
-        v8::String::New("Argument one must be a Number, Array, "
-          "ByteString or ByteArray")));
-  default:
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("One or two arguments allowed")));
   }
 }
 

@@ -28,7 +28,7 @@
 #ifndef V8_COMMONJS_BINARY_BYTE_ARRAY_H
 #define V8_COMMONJS_BINARY_BYTE_ARRAY_H
 
-#include "v8-commonjs/binary.h"
+#include "v8-commonjs/binary/b/binary.h"
 
 namespace commonjs {
 

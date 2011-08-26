@@ -23,7 +23,7 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([v8-commonjs/commonjs.h])
 # Initialize Libtool
 LT_PREREQ([2.2])
-LT_INIT([disable-static])
+LT_INIT([disable-static dlopen])
 # Checks for programs
 AC_PROG_CXX
 AC_LANG([C++])
@@ -59,9 +59,6 @@ LT_AGE=m4_eval(m4_eval(100 * minor_version + micro_version) - interface_age)
 AC_SUBST([LT_CURRENT])
 AC_SUBST([LT_REVISION])
 AC_SUBST([LT_AGE])
-# Configure module directory
-moduledir="\$(libdir)/v8-commonjs"
-AC_SUBST([moduledir])
 # Check for V8
 AC_CHECK_HEADERS([v8.h],,
 	[AC_MSG_ERROR([V8 is required to compile $PACKAGE_NAME])])
@@ -71,6 +68,7 @@ AC_CONFIG_FILES([
 	Makefile
 	tests/Makefile
 	v8-commonjs/Makefile
+	v8-commonjs/binary/Makefile
 ])
 AC_OUTPUT
 AC_MSG_RESULT([

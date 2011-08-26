@@ -1,10 +1,14 @@
 #                                        -*- Automake -*-
 # Process this file with automake to produce Makefile.in.
 
+SUBDIRS = . binary
+
 # V8-CommonJS library
 lib_LTLIBRARIES = libv8-commonjs.la
 libv8_commonjs_la_SOURCES = \
 	commonjs.cc \
+	iconv.cc \
+	iconv.h \
 	module.cc \
 	module-factory.cc \
 	module-factory.h \
@@ -21,24 +25,14 @@ libv8_commonjs_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
 	-ldl
 # Modules
+moduledir = $(libdir)/v8-commonjs
 module_LTLIBRARIES = \
 	assert.la \
-	binary.la \
 	system.la \
 	test.la
 assert_la_SOURCES = \
 	assert.cc \
 	assert.h
-binary_la_SOURCES = \
-	binary/byte-array.cc \
-	binary/byte-array.h \
-	binary/byte-string.cc \
-	binary/byte-string.h \
-	binary/module.cc \
-	binary.cc \
-	binary.h \
-	iconv.cc \
-	iconv.h
 system_la_SOURCES = \
 	system.cc \
 	system.h
@@ -51,6 +45,8 @@ AM_LDFLAGS = \
 	-module \
 	-shared \
 	libv8-commonjs.la
+MODULES = $(module_LTLIBRARIES)
+include $(top_srcdir)/automake/module.mk
 # Module dependencies
 $(module_LTLIBRARIES): libv8-commonjs.la
 # install development headers

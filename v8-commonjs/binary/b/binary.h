@@ -52,6 +52,16 @@ public:
 
   v8::Handle<v8::Value> Join(v8::Handle<v8::Array> array, char number);
 
+  v8::Handle<v8::Value> Split(char value, v8::Handle<v8::Function> construct,
+      uint32_t count, bool include_delimiter);
+
+  v8::Handle<v8::Value> Split(Binary* that, v8::Handle<v8::Function> construct,
+      uint32_t count, bool include_delimiter);
+
+  v8::Handle<v8::Value> Split(v8::Array* array,
+      v8::Handle<v8::Function> construct, uint32_t count,
+      bool include_delimiter);
+
   char Get(uint32_t index) const {
     return data_[index];
   }
@@ -81,8 +91,6 @@ protected: // V8 interface methods
   static v8::Handle<v8::Value> CodeAt(const v8::Arguments& arguments);
 
   static v8::Handle<v8::Value> ByteAt(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Split(const v8::Arguments& arguments);
 
 protected: // Protected methods
   Binary();

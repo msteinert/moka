@@ -229,9 +229,21 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
     return handle_scope.Close(v8::ThrowException(
           v8::String::New("Module loader is not initialized")));
   }
+  // Determine if this is a relative path
+  bool relative = false;
+  if (id.length() > 1) {
+    if ('.' == id[0] && '/' == id[1]) {
+      relative = true;
+    }
+  }
+  if (id.length() > 2) {
+    if ('.' == id[0] && '.' == id[1] && '/' == id[2]) {
+      relative = true;
+    }
+  }
   // Attempt to find the module
   ModulePointer module;
-  if ('.' != id[0]) {
+  if (!relative) {
     // Normal require, search through stored paths
     v8::Local<v8::Array> properties = module_loader->paths_->GetPropertyNames();
     uint32_t index = 0, length = properties->Length();

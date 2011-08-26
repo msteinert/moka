@@ -1,5 +1,5 @@
 var assert = require('assert');
-var binary = require('binary');
+var binary = require('binary/b');
 try {
 	var s = new binary.ByteString(
 			[0, 0, 0, 102,
@@ -8,6 +8,14 @@ try {
 			 0, 0, 0, 98,
 			 0, 0, 0, 97,
 			 0, 0, 0, 114]);
+	//var a = s.split(111, { includeDelimiter: true });
+	//var a = s.split(111, { count: 3, includeDelimiter: true });
+	//var a = s.split(111, { count: 2 });
+	var a = s.split(111);
+	for (var i = 0; i < a.length; ++i) {
+		print(a[i].toSource());
+	}
+	/*
 	assert.strictEqual(s.decodeToString('UCS-4'), 'foobar',
 			'decode UCS-4 ByteString');
 	assert.equal(s.indexOf(102), 3,
@@ -39,6 +47,7 @@ try {
 			'check index of byte 111');
 	assert.equal(a.indexOf(98, 0, 14), -1,
 			'check index of byte 98 between offsets 8 & 14');
+	*/
 } catch (error) {
 	if (error instanceof assert.AssertionError) {
 		print(error.message ? "FAIL: " + error.message : "FAIL");

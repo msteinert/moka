@@ -29,6 +29,7 @@
 #define V8_COMMONJS_ICONV_H
 
 #include <v8.h>
+#include "v8-commonjs/macros.h"
 
 namespace commonjs {
 
@@ -36,7 +37,7 @@ class Iconv;
 
 } // namespace commonjs
 
-class commonjs::Iconv {
+class COMMONJSEXPORT commonjs::Iconv {
 public:
   Iconv();
 
