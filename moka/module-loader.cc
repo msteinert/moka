@@ -25,7 +25,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// \brief Implements the API found in v8-commonjs/module-loader.h
+/// \brief Implements the API found in moka/module-loader.h
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -35,11 +35,11 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include "moka/module-factory.h"
+#include "moka/module-loader.h"
 #include <sstream>
-#include "v8-commonjs/module-factory.h"
-#include "v8-commonjs/module-loader.h"
 
-namespace commonjs {
+namespace moka {
 
 ModuleLoader::ModuleLoader()
   : error_("None")
@@ -122,26 +122,26 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
   uint32_t index = 0;
   if (!secure_) {
     // Add directories from the environment
-    const char* env = ::getenv("COMMONJSPATH");
+    const char* env = ::getenv("MOKAPATH");
     if (env) {
       std::string path;
-      std::stringstream commonjspath(env);
-      while (std::getline(commonjspath, path, ':')) {
+      std::stringstream mokapath(env);
+      while (std::getline(mokapath, path, ':')) {
         paths->Set(index++, v8::String::New(path.c_str()));
       }
     }
     // Add the current working directory
     paths->Set(index++, v8::String::New("."));
-    // Add $HOME/lib/commonjs
+    // Add $HOME/lib/moka
     env = ::getenv("HOME");
     if (env) {
       std::string home(env);
-      home.append("/lib/commonjs");
+      home.append("/lib/moka");
       paths->Set(index++, v8::String::New(home.c_str()));
     }
   }
-  // Add $libdir/commonjs
-  paths->Set(index++, v8::String::New(LIBDIR "/commonjs"));
+  // Add $libdir/moka
+  paths->Set(index++, v8::String::New(LIBDIR "/moka"));
   // Store 'paths' as a persistent object
   paths_ = v8::Persistent<v8::Array>::New(paths);
   if (!secure_) {
@@ -305,6 +305,6 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
   return handle_scope.Close(module->GetExports());
 }
 
-} // namespace commonjs
+} // namespace moka
 
 // vim: tabstop=2:sw=2:expandtab

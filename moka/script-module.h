@@ -26,19 +26,61 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
- * \brief Internally used macros
+ * \brief A JavaScript source code module
  */
 
-#ifndef V8_COMMONJS_MACROS_H
-#define V8_COMMONJS_MACROS_H
+#ifndef MOKA_SCRIPT_MODULE_H
+#define MOKA_SCRIPT_MODULE_H
 
-#if defined(__GNUC__) && (__GNUC__ >= 4)
-/// \brief Control symbol visibility
-#define COMMONJSEXPORT __attribute__ ((visibility("default")))
-#else
-#define COMMONJSEXPORT
-#endif
+#include <cstdio>
+#include "moka/module.h"
+#include <v8.h>
 
-#endif // V8_COMMONJS_MACROS_H
+namespace moka {
+
+namespace internal {
+
+class ScriptModule;
+
+} // namespace internal
+
+} // namespace moka
+
+/// \brief A script module
+class moka::internal::ScriptModule: public moka::Module {
+public:
+  /**
+   * \brief Construct a module from JavaScript source code
+   *
+   * \param id [in] The ID of the new module
+   * \param file_name [in] The absolute path of the file containing the module
+   * \param secure [in] Indicates if this should be a secure module
+   * \param require [in] The object implementing the 'require' function
+   * \param file [in] An open file handle (this object will own file)
+   * \param size [in] The size of file in bytes
+   */
+  ScriptModule(const char* id, const char* file_name, bool secure,
+      v8::Handle<v8::Object> require, FILE* file, size_t size);
+
+  /// \brief Destructor
+  virtual ~ScriptModule();
+
+  /**
+   * \brief Load a JavaScript source code module
+   *
+   * This function reads JavaScript from a file handle and then attempts
+   * to compile and run the script.
+   *
+   * \return This function returns true if successful, false otherwise.
+   */
+  virtual bool Load();
+
+private:
+  FILE* file_;
+  size_t size_;
+  bool loaded_;
+};
+
+#endif // MOKA_SCRIPT_MODULE_H
 
 // vim: tabstop=2:sw=2:expandtab

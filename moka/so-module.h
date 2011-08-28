@@ -26,48 +26,63 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /**
- * \file
- * \brief The V8-CommonJS API
- *
- * \mainpage V8-CommonJS API Reference
- *
- * V8-CommonJS is an implementation of the CommonJS specification in C++
- * for Google's V8 JavaScript engine. This API is meant to be used by
- * embedder's of the V8 API.
- *
- * For more information and source code see https://github.com/msteinert/v8-commonjs
+ * \brief A shared object module
  */
 
-#ifndef V8_COMMONJS_H
-#define V8_COMMONJS_H
+#ifndef MOKA_SO_MODULE_H
+#define MOKA_SO_MODULE_H
 
-// Include the module API
-#include <v8-commonjs/module.h>
-
-// Include the module loader API
-#include <v8-commonjs/module-loader.h>
-
-// Include the V8 API
+#include "moka/module.h"
 #include <v8.h>
 
-namespace commonjs {
+namespace moka {
 
-/**
- * \brief Load a module from C++.
- *
- * This function calls the require function in the current execution context.
- *
- * \note The result of calling this function without initializing the module
- *       loader is undefined.
- *
- * \param name [in] The name of the module to load.
- *
- * \return The exports from the loaded module.
- */
-v8::Handle<v8::Value> Require(v8::Handle<v8::String> name);
+namespace internal {
 
-}
+class SoModule;
 
-#endif // V8_COMMONJS_H
+} // namespace internal
+
+} // namespace moka
+
+/// \brief A shared object module
+class moka::internal::SoModule: public moka::Module {
+public:
+  /**
+   * \brief Construct a module from JavaScript source code
+   *
+   * \param id [in] The ID of the new module
+   * \param file_name [in] The absolute path of the file containing the module
+   * \param secure [in] Indicates if this should be a secure module
+   * \param require [in] The object implementing the 'require' function
+   * \param handle [in] A shared object handle returned by dlopen()
+   * \param argc [in/out] A pointer to the command line argument count
+   * \param argv [in/out] A pointer to the command line argument vector
+   */
+  SoModule(const char* id, const char* file_name, bool secure,
+      v8::Handle<v8::Object> require, void* handle, int* argc, char*** argv);
+
+  /// \brief Destructor
+  virtual ~SoModule();
+
+  /**
+   * \brief Load a shared object module
+   *
+   * This function attempts to load the moka_module__ structure and
+   * initialize the module by calling its moka::Module::InitializeCallback
+   * function.
+   *
+   * \return This function returns true if successful, false otherwise.
+   */
+  virtual bool Load();
+
+private:
+  void* handle_;
+  int* argc_;
+  char*** argv_;
+  bool loaded_;
+};
+
+#endif // MOKA_SO_MODULE_H
 
 // vim: tabstop=2:sw=2:expandtab

@@ -25,40 +25,20 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef V8_COMMONJS_ICONV_H
-#define V8_COMMONJS_ICONV_H
+/**
+ * \brief Internally used macros
+ */
 
-#include <v8.h>
-#include "v8-commonjs/macros.h"
+#ifndef MOKA_MACROS_H
+#define MOKA_MACROS_H
 
-namespace commonjs {
+#if defined(__GNUC__) && (__GNUC__ >= 4)
+/// \brief Control symbol visibility
+#define MOKA_EXPORT __attribute__ ((visibility("default")))
+#else
+#define MOKA_EXPORT
+#endif
 
-class Iconv;
-
-} // namespace commonjs
-
-class COMMONJSEXPORT commonjs::Iconv {
-public:
-  Iconv();
-
-  ~Iconv();
-
-  v8::Handle<v8::Value> Convert(const char* data, uint32_t length,
-      const char* tocode, const char* fromcode);
-
-  uint32_t GetLength() const {
-    return length_;
-  }
-
-  const char* GetData() const {
-    return data_;
-  }
-
-private:
-  uint32_t length_;
-  char* data_;
-};
-
-#endif // V8_COMMONJS_ICONV_H
+#endif // MOKA_MACROS_H
 
 // vim: tabstop=2:sw=2:expandtab

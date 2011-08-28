@@ -25,18 +25,18 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// \brief Implements the API found in v8-commonjs/module-factory.h
+/// \brief Implements the API found in moka/module-factory.h
 
 #include <cstdlib>
 #include <dlfcn.h>
+#include "moka/module-factory.h"
+#include "moka/script-module.h"
+#include "moka/so-module.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "v8-commonjs/module-factory.h"
-#include "v8-commonjs/script-module.h"
-#include "v8-commonjs/so-module.h"
 
-namespace commonjs {
+namespace moka {
 
 namespace internal {
 
@@ -143,6 +143,6 @@ ModulePointer ModuleFactory::NewModule(const char* id, const char* path) {
 
 } // namespace internal
 
-} // namespace commonjs
+} // namespace moka
 
 // vim: tabstop=2:sw=2:expandtab

@@ -1,5 +1,5 @@
 #                                        -*- Automake -*-
 # Process this file with automake to produce Makefile.in.
 
-SUBDIRS = v8-commonjs tests
+SUBDIRS = moka
 ACLOCAL_AMFLAGS = -I m4

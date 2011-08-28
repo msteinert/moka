@@ -30,8 +30,8 @@ depcomp
 INSTALL
 install-sh
 libtool
-v8-commonjs-*.tar.gz
-v8-module
+moka-*.tar.gz
+moka
 ltmain.sh
 m4/libtool.m4
 m4/lt*.m4

@@ -27,17 +27,17 @@
 
 /**
  * \file
- * \brief Interface to CommonJS modules
+ * \brief Interface to Moka modules
  */
 
-#ifndef V8_COMMONJS_MODULE_H
-#define V8_COMMONJS_MODULE_H
+#ifndef MOKA_MODULE_H
+#define MOKA_MODULE_H
 
+#include <moka/macros.h>
 #include <string>
 #include <v8.h>
-#include <v8-commonjs/macros.h>
 
-namespace commonjs {
+namespace moka {
 
 class Module;
 
@@ -47,14 +47,14 @@ class Module;
  * The module loader will call this initialization function during the
  * shared module loading process. This function should add new objects
  * the exports for the module. Exports can be retrieved by calling the
- * function commonjs::Module::GetExports().
+ * function moka::Module::GetExports().
  *
  * If any errors occur during the module initialization, the module should
  * return false and optionally set an exception by calling
- * commonjs::Module::SetException(). If no exception is set then a generic
+ * moka::Module::SetException(). If no exception is set then a generic
  * exception will be returned to JavaScript.
  *
- * \param module [in/out] The v8-commonjs module object for the module
+ * \param module [in/out] The moka module object for the module
  * \param argc [in/out] A pointer to application argument count
  * \param argv [in/out] A pointer to the application argument vector
  *
@@ -69,7 +69,7 @@ typedef bool (*InitializeCallback)(Module& module, int* argc, char*** argv);
  * \brief The shared module initialization structure
  *
  * In order to be loaded, shared modules must expose this a structure of this
- * type called "commonjs_module__". The macro COMMONJS_MODULE() is provided
+ * type called "moka_module__". The macro MOKA_MODULE() is provided
  * to assist the programmer in exporting this structure.
  *
  * The major version must match the library major version in order for the
@@ -85,10 +85,10 @@ struct module {
   InitializeCallback initialize; ///< The module initialization callback
 };
 
-} // namespace commonjs
+} // namespace moka
 
 /// \brief A CommonJS 1.1 module
-class COMMONJSEXPORT commonjs::Module {
+class MOKA_EXPORT moka::Module {
 public:
   /**
    * \brief Construct a module in an existing V8 context
@@ -270,7 +270,7 @@ private: // private data
  * The module loader will only load modules that have a major version number
  * equal to this value.
  */
-#define COMMONJS_MODULE_VERSION_MAJOR (1)
+#define MOKA_MODULE_VERSION_MAJOR (1)
 
 /**
  * \brief The current minor version of the module loader
@@ -278,32 +278,32 @@ private: // private data
  * The module loader will only load modules that have a minor version number
  * greater than or equal to this value.
  */
-#define COMMONJS_MODULE_VERSION_MINOR (0)
+#define MOKA_MODULE_VERSION_MINOR (0)
 
 /**
  * \brief Helper macro for shared module implementations
  *
  * This macro may be used by module implementations to ensure the correct
- * declaration and linkage for the commonjs_module__ structure.
+ * declaration and linkage for the moka_module__ structure.
  *
  * The initialization function must of the type:
- * commonjs::Module::InitializeCallback
+ * moka::Module::InitializeCallback
  *
  * The side-effect of calling this macro is to declare a globally visible
- * commonjs::module structure that the module loader will use to load the
+ * moka::module structure that the module loader will use to load the
  * module.
  *
  * \param initialize [in] A pointer to the module initialization function
  */
-#define COMMONJS_MODULE(initialize) \
+#define MOKA_MODULE(initialize) \
 extern "C" { \
-  commonjs::module COMMONJSEXPORT commonjs_module__ = { \
-    COMMONJS_MODULE_VERSION_MAJOR, \
-    COMMONJS_MODULE_VERSION_MINOR, \
+  moka::module MOKA_EXPORT moka_module__ = { \
+    MOKA_MODULE_VERSION_MAJOR, \
+    MOKA_MODULE_VERSION_MINOR, \
     initialize, \
   }; \
 }
 
-#endif // V8_COMMONJS_MODULE_H
+#endif // MOKA_MODULE_H
 
 // vim: tabstop=2:sw=2:expandtab

@@ -30,16 +30,16 @@
  * \brief Interface to the module loader
  */
 
-#ifndef V8_COMMONJS_MODULE_LOADER_H
-#define V8_COMMONJS_MODULE_LOADER_H
+#ifndef MOKA_MODULE_LOADER_H
+#define MOKA_MODULE_LOADER_H
 
-#include <v8-commonjs/macros.h>
+#include <moka/macros.h>
 #include <stack>
 #include <string>
 #include <tr1/memory>
 #include <v8.h>
 
-namespace commonjs {
+namespace moka {
 
 class ModuleLoader;
 class Module;
@@ -56,10 +56,10 @@ typedef std::tr1::shared_ptr<internal::ModuleFactory> ModuleFactoryPointer;
 
 typedef std::stack<ModulePointer> ModuleStack;
 
-} // namespace commonjs
+} // namespace moka
 
 /// A CommonJS 1.1 module loader
-class COMMONJSEXPORT commonjs::ModuleLoader {
+class MOKA_EXPORT moka::ModuleLoader {
 public:
   /**
    * \brief Construct a new module loader
@@ -136,6 +136,6 @@ private: // private data
   ModuleStack module_stack_;
 };
 
-#endif // V8_COMMONJS_MODULE_LOADER_H
+#endif // MOKA_MODULE_LOADER_H
 
 // vim: tabstop=2:sw=2:expandtab

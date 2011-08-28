@@ -32,10 +32,10 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include "moka/moka.h"
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "v8-commonjs/commonjs.h"
 
 void Report(v8::TryCatch& try_catch)
 {
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
   // Enter the created context
   v8::Context::Scope scope(context);
   // Initialize module loader
-  commonjs::ModuleLoader loader;
+  moka::ModuleLoader loader;
   if (!loader.Initialize(argv[1], &argc, &argv)) {
     fprintf(stderr, "error: module loader: %s\n", loader.GetError());
     context.Dispose();

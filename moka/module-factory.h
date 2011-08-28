@@ -29,15 +29,15 @@
  * \brief The module factory is used by the module loader to load new modules
  */
 
-#ifndef V8_COMMONJS_MODULE_FACTORY_H
-#define V8_COMMONJS_MODULE_FACTORY_H
+#ifndef MOKA_MODULE_FACTORY_H
+#define MOKA_MODULE_FACTORY_H
 
 #include <climits>
 #include <map>
+#include "moka/script-module.h"
 #include <tr1/memory>
-#include "v8-commonjs/script-module.h"
 
-namespace commonjs {
+namespace moka {
 
 namespace internal {
 
@@ -51,10 +51,10 @@ typedef std::map<std::string, ModulePointer> ModuleMap;
 
 } // namespace internal
 
-} // namespace commonjs
+} // namespace moka
 
-/// \brief The V8-CommonJS module factory
-class commonjs::internal::ModuleFactory {
+/// \brief The Moka module factory
+class moka::internal::ModuleFactory {
 public:
   /**
    * \brief Construct a module factory
@@ -143,6 +143,6 @@ private: // private data
   char resolved_path_[PATH_MAX];
 };
 
-#endif // V8_COMMONJS_MODULE_FACTORY_H
+#endif // MOKA_MODULE_FACTORY_H
 
 // vim: tabstop=2:sw=2:expandtab

@@ -25,7 +25,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-/// \brief Implements the API found in v8-commonjs/module.h
+/// \brief Implements the API found in moka/module.h
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -35,9 +35,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <libgen.h>
-#include "v8-commonjs/module.h"
+#include "moka/module.h"
 
-namespace commonjs {
+namespace moka {
 
 Module::Module(const char* id, const char* file_name, bool secure,
     v8::Handle<v8::Object> require, v8::Handle<v8::Context> context)
@@ -149,6 +149,6 @@ const char* Module::GetDirectoryName() {
   return directory_name_;
 }
 
-} // namespace commonjs
+} // namespace moka
 
 // vim: tabstop=2:sw=2:expandtab

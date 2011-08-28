@@ -25,33 +25,28 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+/**
+ * \file
+ * \brief The Moka API
+ *
+ * \mainpage Moka API Reference
+ *
+ * Moka is implments parts of the the CommonJS specification in C++ for
+ * Google's V8 JavaScript engine. This API is meant to be used by V8
+ * embedders.
+ *
+ * For more information and source code see https://github.com/msteinert/moka
+ */
 
-#include "v8-commonjs/commonjs.h"
+#ifndef MOKA_H
+#define MOKA_H
 
-namespace commonjs {
+// Include the module API
+#include <moka/module.h>
 
-v8::Handle<v8::Value> Require(v8::Handle<v8::String> name) {
-    v8::Handle<v8::Value> require = v8::Context::GetCurrent()->Global()->
-      Get(v8::String::NewSymbol("require"));
-    if (require.IsEmpty()) {
-      // Should be unreachable
-      v8::ThrowException(v8::Exception::Error(
-            v8::String::New("Require is empty")));
-      return v8::Handle<v8::Value>();
-    }
-    if (!require->IsFunction()) {
-      // Should be unreachable
-      v8::ThrowException(v8::Exception::Error(
-            v8::String::New("Require is not a function")));
-      return v8::Handle<v8::Value>();
-    }
-    v8::Handle<v8::Value> argv[1] = { name };
-    return v8::Function::Cast(*require)->Call(require->ToObject(), 1, argv);
-}
+// Include the module loader API
+#include <moka/module-loader.h>
 
-} // namespace commonjs
+#endif // MOKA_H
 
 // vim: tabstop=2:sw=2:expandtab
