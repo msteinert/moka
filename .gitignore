@@ -31,7 +31,6 @@ INSTALL
 install-sh
 libtool
 moka-*.tar.gz
-moka
 ltmain.sh
 m4/libtool.m4
 m4/lt*.m4
