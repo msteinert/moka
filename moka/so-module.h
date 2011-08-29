@@ -74,7 +74,7 @@ public:
    *
    * \return This function returns true if successful, false otherwise.
    */
-  virtual bool Load();
+  virtual v8::Handle<v8::Value> Load();
 
 private:
   void* handle_;

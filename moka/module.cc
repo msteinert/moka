@@ -149,6 +149,37 @@ const char* Module::GetDirectoryName() {
   return directory_name_;
 }
 
+v8::Handle<v8::Value> Module::Require(v8::Handle<v8::String> name) {
+  v8::HandleScope handle_scope;
+  v8::Handle<v8::Value> require = v8::Context::GetCurrent()->Global()->
+    Get(v8::String::NewSymbol("require"));
+  if (require.IsEmpty()) {
+    // Should be unreachable
+    return handle_scope.Close(v8::ThrowException(v8::Exception::Error(
+          v8::String::New("Require is empty"))));
+  }
+  if (!require->IsFunction()) {
+    // Should be unreachable
+    return handle_scope.Close(v8::ThrowException(v8::Exception::Error(
+          v8::String::New("Require is not a function"))));
+  }
+  v8::Handle<v8::Value> argv[1] = { name };
+  return handle_scope.Close(
+      v8::Function::Cast(*require)->Call(require->ToObject(), 1, argv));
+}
+
+v8::Handle<v8::Value> Module::Exports() {
+  v8::HandleScope handle_scope;
+  v8::Handle<v8::Value> exports = v8::Context::GetCurrent()->Global()->
+    Get(v8::String::NewSymbol("exports"));
+  if (exports.IsEmpty()) {
+    // Should be unreachable
+    return handle_scope.Close(v8::ThrowException(v8::Exception::Error(
+          v8::String::New("Exports is empty"))));
+  }
+  return handle_scope.Close(exports);
+}
+
 } // namespace moka
 
 // vim: tabstop=2:sw=2:expandtab

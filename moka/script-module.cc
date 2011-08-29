@@ -53,18 +53,18 @@ ScriptModule::~ScriptModule() {
   }
 }
 
-bool ScriptModule::Load() {
+v8::Handle<v8::Value> ScriptModule::Load() {
   v8::HandleScope handle_scope;
   if (loaded_) {
     // Already loaded
-    return true;
+    return GetExports();
   }
   if (!Initialize()) {
     // Initialize the base module
     std::string message("Failed to initialize module ");
     message.append(GetId());
-    SetException(message);
-    return false;
+    return handle_scope.Close(v8::ThrowException(
+          v8::String::New(message.c_str())));
   }
   // Reset file pointer
   ::rewind(file_);
@@ -77,8 +77,8 @@ bool ScriptModule::Load() {
     message.append(GetId());
     message.append(": ");
     message.append(error);
-    SetException(message);
-    return false;
+    return handle_scope.Close(v8::ThrowException(
+          v8::String::New(message.c_str())));
   }
   // Read the script into the buffer
   size_t size = ::fread(characters, 1, size_, file_);
@@ -91,8 +91,8 @@ bool ScriptModule::Load() {
       message.append(GetId());
       message.append(": ");
       message.append(error);
-      SetException(message);
-      return false;
+      return handle_scope.Close(v8::ThrowException(
+            v8::String::New(message.c_str())));
     }
     ::clearerr(file_);
   }
@@ -108,17 +108,15 @@ bool ScriptModule::Load() {
   v8::Local<v8::Script> script = v8::Script::Compile(source,
       v8::String::New(GetFileName()));
   if (script.IsEmpty()) {
-    SetException(handle_scope.Close(try_catch.ReThrow()));
-    return false;
+    return handle_scope.Close(v8::ThrowException(try_catch.ReThrow()));
   }
   // Run the script
   v8::Local<v8::Value> result = script->Run();
   if (result.IsEmpty()) {
-    SetException(handle_scope.Close(try_catch.ReThrow()));
-    return false;
+    return handle_scope.Close(v8::ThrowException(try_catch.ReThrow()));
   }
   loaded_ = true;
-  return true;
+  return handle_scope.Close(GetExports());
 }
 
 } // namespace internal

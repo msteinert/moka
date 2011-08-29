@@ -29,18 +29,22 @@
 #include "config.h"
 #endif
 
-#include "moka/lang/throwable.h"
+#include "moka/lang/exception.h"
 #include "moka/module.h"
 
 namespace moka {
 
 // Initialize module
-static bool LangInitialize(Module& module, int* argc, char*** argv) {
+static v8::Handle<v8::Value> LangInitialize(int* argc, char*** argv) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Object> exports = module.GetExports();
-  exports->Set(v8::String::NewSymbol("Throwable"),
-      Throwable::GetTemplate()->GetFunction());
-  return true;
+  v8::Handle<v8::Value> value = Module::Exports();
+  if (value.IsEmpty() || value->IsUndefined()) {
+    return handle_scope.Close(value);
+  }
+  v8::Handle<v8::Object> exports = value->ToObject();
+  exports->Set(v8::String::NewSymbol("Exception"),
+      Exception::GetTemplate()->GetFunction());
+  return handle_scope.Close(value);
 }
 
 } // namespace moka

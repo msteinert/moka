@@ -37,13 +37,14 @@ moka_CPPFLAGS = \
 moka_LDFLAGS = \
 	libmoka.la \
 	-lv8
+$(bin_PROGRAMS): libmoka.la
 # Modules
 moduledir = $(libdir)/moka
 module_LTLIBRARIES = \
 	lang.la
 lang_la_SOURCES = \
-	lang/throwable.cc \
-	lang/throwable.h \
+	lang/exception.cc \
+	lang/exception.h \
 	lang/module.cc
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \

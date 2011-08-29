@@ -46,15 +46,11 @@ class Module;
  *
  * The module loader will call this initialization function during the
  * shared module loading process. This function should add new objects
- * the exports for the module. Exports can be retrieved by calling the
- * function moka::Module::GetExports().
+ * the exports for the module.
  *
  * If any errors occur during the module initialization, the module should
- * return false and optionally set an exception by calling
- * moka::Module::SetException(). If no exception is set then a generic
- * exception will be returned to JavaScript.
+ * throw an exception.
  *
- * \param module [in/out] The moka module object for the module
  * \param argc [in/out] A pointer to application argument count
  * \param argv [in/out] A pointer to the application argument vector
  *
@@ -63,7 +59,7 @@ class Module;
  *         exports will be returned to JavaScript. If the module could not
  *         be initialized this function should return false.
  */
-typedef bool (*InitializeCallback)(Module& module, int* argc, char*** argv);
+typedef v8::Handle<v8::Value> (*InitializeCallback)(int* argc, char*** argv);
 
 /**
  * \brief The shared module initialization structure
@@ -139,17 +135,8 @@ public:
    * \return This function returns true if the module was successfully
    *         loaded, false otherwise.
    */
-  virtual bool Load() {
-    return true;
-  }
-
-  /**
-   * \brief Get the module ID
-   *
-   * \return The module ID.
-   */
-  const char* GetId() const {
-    return id_.c_str();
+  virtual v8::Handle<v8::Value> Load() {
+    return exports_;
   }
 
   /**
@@ -169,21 +156,51 @@ public:
   const char* GetDirectoryName();
 
   /**
-   * \brief Get the V8 context for this module
-   *
-   * \return The context for this module.
-   */
-  const v8::Handle<v8::Context> GetContext() const {
-    return context_;
-  }
-
-  /**
    * \brief Get the 'module' object for this module
    *
    * \return The 'module' object.
    */
   const v8::Handle<v8::Object> GetModule() const {
     return module_;
+  }
+
+public: // module helper functions
+  /**
+   * \brief Require a module from C++
+   *
+   * \param name [in] The name of the required module
+   *
+   * \return The exports for name. If name could not be loaded then this
+   *         function throws an exception and returns the undefined value.
+   */
+  static v8::Handle<v8::Value> Require(v8::Handle<v8::String> name);
+
+  /**
+   * \brief Get exports for the current contxt
+   *
+   * \return The exports for the current context. If exports could not be
+   *         retrieved this function throws and exception and returns the
+   *         undefined value.
+   */
+  static v8::Handle<v8::Value> Exports();
+
+protected:
+  /**
+   * \brief Get the module ID
+   *
+   * \return The module ID.
+   */
+  const char* GetId() const {
+    return id_.c_str();
+  }
+
+  /**
+   * \brief Get the V8 context for this module
+   *
+   * \return The context for this module.
+   */
+  const v8::Handle<v8::Context> GetContext() const {
+    return context_;
   }
 
   /**
@@ -195,51 +212,6 @@ public:
    */
   const v8::Handle<v8::Object> GetExports() const {
     return exports_;
-  }
-
-  /**
-   * \brief Get an exception object after an API error
-   *
-   * \return The previously set exception object.
-   */
-  const v8::Handle<v8::Value> GetException() const {
-    return exception_;
-  }
-
-  /**
-   * \brief Set an exception from a C string
-   *
-   * \param exception [in] The exception message
-   */
-  void SetException(const char* exception) {
-    if (!exception_.IsEmpty()) {
-      exception_.Dispose();
-      exception_.Clear();
-    }
-    exception_ = v8::Persistent<v8::Value>::New(
-        v8::Exception::Error(v8::String::New(exception)));
-  }
-
-  /**
-   * \brief Set an exception from a C++ std::string
-   *
-   * \param exception [in] The exception message
-   */
-  void SetException(const std::string& exception) {
-    SetException(exception.c_str());
-  }
-
-  /**
-   * \brief Set an exception from a V8 exception object
-   *
-   * \param exception [in] The exception
-   */
-  void SetException(v8::Handle<v8::Value> exception) {
-    if (!exception_.IsEmpty()) {
-      exception_.Dispose();
-      exception_.Clear();
-    }
-    exception_ = v8::Persistent<v8::Value>::New(exception);
   }
 
 private: // non-copyable
@@ -261,7 +233,6 @@ private: // private data
   v8::Persistent<v8::Object> require_;
   v8::Persistent<v8::Object> exports_;
   v8::Persistent<v8::Object> module_;
-  v8::Persistent<v8::Value> exception_;
 };
 
 /**

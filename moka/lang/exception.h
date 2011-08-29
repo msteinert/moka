@@ -25,18 +25,18 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef MOKA_THROWABLE_H
-#define MOKA_THROWABLE_H
+#ifndef MOKA_EXCEPTION_H
+#define MOKA_EXCEPTION_H
 
 #include "moka/module.h"
 
 namespace moka {
 
-class Throwable;
+class Exception;
 
 } // namespace moka
 
-class moka::Throwable{
+class moka::Exception{
 public:
   static v8::Handle<v8::Value> New(
       v8::Handle<v8::Value> message = v8::Handle<v8::Value>());
@@ -49,16 +49,16 @@ protected: // V8 interface methods
   static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
 
 protected: // Protected methods
-  Throwable() {}
+  Exception() {}
 
-  virtual ~Throwable() {}
+  virtual ~Exception() {}
 
 private: // Private methods
-  Throwable(Throwable const& that);
+  Exception(Exception const& that);
 
-  void operator=(Throwable const& that);
+  void operator=(Exception const& that);
 };
 
-#endif // MOKA_THROWABLE_H
+#endif // MOKA_EXCEPTION_H
 
 // vim: tabstop=2:sw=2:expandtab
