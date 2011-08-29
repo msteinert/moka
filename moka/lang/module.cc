@@ -25,40 +25,26 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef MOKA_LANG_H
-#define MOKA_LANG_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
+#include "moka/lang/throwable.h"
 #include "moka/module.h"
 
 namespace moka {
 
-class Exception;
+// Initialize module
+static bool LangInitialize(Module& module, int* argc, char*** argv) {
+  v8::HandleScope handle_scope;
+  v8::Handle<v8::Object> exports = module.GetExports();
+  exports->Set(v8::String::NewSymbol("Throwable"),
+      Throwable::GetTemplate()->GetFunction());
+  return true;
+}
 
 } // namespace moka
 
-class moka::Binary {
-public:
-  static v8::Handle<v8::Value> New(
-      v8::Handle<v8::Value> message = v8::Handle<v8::Value>());
-
-  static v8::Handle<v8::FunctionTemplate> GetTemplate();
-
-protected: // V8 interface methods
-  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
-
-protected: // Protected methods
-  Exception() {}
-
-  virtual ~Exception() {}
-
-private: // Private methods
-  Exception(Binary const& that);
-
-  void operator=(Exception const& that);
-};
-
-#endif // MOKA_LANG_H
+MOKA_MODULE(moka::LangInitialize)
 
 // vim: tabstop=2:sw=2:expandtab

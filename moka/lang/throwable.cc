@@ -29,11 +29,11 @@
 #include "config.h"
 #endif
 
-#include "moka/lang/lang.h"
+#include "moka/lang/throwable.h"
 
 namespace moka {
 
-v8::Handle<v8::Value> Exception::New(v8::Handle<v8::Value> message) {
+v8::Handle<v8::Value> Throwable::New(v8::Handle<v8::Value> message) {
   v8::HandleScope handle_scope;
   v8::Handle<v8::Object> object;
   if (!message.IsEmpty()) {
@@ -48,21 +48,21 @@ v8::Handle<v8::Value> Exception::New(v8::Handle<v8::Value> message) {
   }
 }
 
-v8::Handle<v8::FunctionTemplate> Exception::GetTemplate() {
+v8::Handle<v8::FunctionTemplate> Throwable::GetTemplate() {
   v8::HandleScope handle_scope;
   static v8::Persistent<v8::FunctionTemplate> templ_;
   if (!templ_.IsEmpty()) {
     return templ_;
   }
   v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
-  templ->SetClassName(v8::String::NewSymbol("Exception"));
+  templ->SetClassName(v8::String::NewSymbol("Throwable"));
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toString"),
       v8::FunctionTemplate::New(ToString)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
 
-v8::Handle<v8::Value> AssertionError::New(const v8::Arguments& arguments) {
+v8::Handle<v8::Value> Throwable::New(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
   if (!arguments.IsConstructCall()) {
     int argc = arguments.Length();
@@ -80,7 +80,7 @@ v8::Handle<v8::Value> AssertionError::New(const v8::Arguments& arguments) {
     return handle_scope.Close(instance);
   }
   v8::Handle<v8::Object> self = arguments.This();
-  self->Set(v8::String::NewSymbol("name"), v8::String::NewSymbol("Exception"));
+  self->Set(v8::String::NewSymbol("name"), v8::String::NewSymbol("Throwable"));
   if (arguments.Length()) {
     if (!arguments[0].IsEmpty()) {
       self->Set(v8::String::NewSymbol("message"), arguments[0]);
@@ -89,7 +89,7 @@ v8::Handle<v8::Value> AssertionError::New(const v8::Arguments& arguments) {
   return self;
 }
 
-v8::Handle<v8::Value> AssertionError::ToString(const v8::Arguments& arguments) {
+v8::Handle<v8::Value> Throwable::ToString(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
   std::string string;
   v8::Local<v8::Object> self = arguments.This();

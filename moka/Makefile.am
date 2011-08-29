@@ -19,7 +19,8 @@ libmoka_la_CPPFLAGS = \
 	-DLIBDIR=\"$(libdir)\"
 libmoka_la_LDFLAGS = \
 	-version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) \
-	-ldl -lv8
+	-ldl \
+	-lv8
 pkgincludedir = $(includedir)/moka
 pkginclude_HEADERS = \
 	macros.h \
@@ -34,10 +35,16 @@ moka_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir)
 moka_LDFLAGS = \
-	libmoka.la -lv8
+	libmoka.la \
+	-lv8
 # Modules
 moduledir = $(libdir)/moka
-module_LTLIBRARIES =
+module_LTLIBRARIES = \
+	lang.la
+lang_la_SOURCES = \
+	lang/throwable.cc \
+	lang/throwable.h \
+	lang/module.cc
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir)
