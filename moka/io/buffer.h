@@ -44,6 +44,8 @@ class moka::io::Buffer {
 public:
   static v8::Handle<v8::Value> New(size_t size = 0);
 
+  static v8::Handle<v8::Value> New(const char* buffer, size_t length);
+
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
   v8::Handle<v8::Value> Resize(size_t length);
@@ -58,6 +60,10 @@ public:
 
   size_t GetLength() const {
     return length_;
+  }
+
+  char* GetBuffer() const {
+    return buffer_;
   }
 
 protected: // V8 interface methods

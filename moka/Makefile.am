@@ -41,12 +41,22 @@ $(bin_PROGRAMS): libmoka.la
 # Modules
 moduledir = $(libdir)/moka
 module_LTLIBRARIES = \
-	io.la
+	io.la \
+	limits.la \
+	locale.la
 io_la_SOURCES = \
 	io/buffer.cc \
 	io/buffer.h \
+	io/iconv.cc \
+	io/iconv.h \
 	io/module.cc \
 	io/stream.h
+limits_la_SOURCES = \
+	limits/module.cc
+locale_la_SOURCES = \
+	locale/locale.cc \
+	locale/locale.h \
+	locale/module.cc
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir)
@@ -55,6 +65,4 @@ AM_LDFLAGS = \
 	-module \
 	-shared \
 	libmoka.la
-MODULES = $(module_LTLIBRARIES)
-include $(top_srcdir)/automake/module.mk
 $(module_LTLIBRARIES): libmoka.la

@@ -25,37 +25,70 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef MOKA_IO_ICONV_H
+#define MOKA_IO_ICONV_H
 
+#include <iconv.h>
 #include "moka/io/buffer.h"
-#include "moka/io/iconv.h"
 #include "moka/module.h"
+#include <string>
 
 namespace moka {
 
 namespace io {
 
-// Initialize module
-static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
-  v8::HandleScope handle_scope;
-  v8::Handle<v8::Value> value = Module::Exports();
-  if (value.IsEmpty() || value->IsUndefined()) {
-    return handle_scope.Close(value);
-  }
-  v8::Handle<v8::Object> exports = value->ToObject();
-  exports->Set(v8::String::NewSymbol("Buffer"),
-      Buffer::GetTemplate()->GetFunction());
-  exports->Set(v8::String::NewSymbol("Iconv"),
-      Iconv::GetTemplate()->GetFunction());
-  return handle_scope.Close(value);
-}
+class Iconv;
 
 } // namespace io
 
 } // namespace moka
 
-MOKA_MODULE(moka::io::Initialize)
+class moka::io::Iconv {
+public:
+  static v8::Handle<v8::Value> New(const char* to, const char* from);
+
+  static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+  v8::Handle<v8::Value> Convert(Buffer* in);
+
+private: // V8 interface methods
+  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+
+  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
+
+  static v8::Handle<v8::Value> ToGet(v8::Local<v8::String> property,
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> FromGet(v8::Local<v8::String> property,
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Convert(const v8::Arguments& arguments);
+
+private: // Private methods
+  v8::Handle<v8::Value> Construct(const char* to, const char* from);
+
+  Iconv();
+
+  ~Iconv();
+
+  Iconv(Iconv const& that);
+
+  void operator=(Iconv const& that);
+
+  v8::Handle<v8::Value> EnsureBuffer(size_t length);
+
+  v8::Handle<v8::Value> PruneBuffer();
+
+private: // Private data
+  iconv_t cd_;
+  size_t length_;
+  char* buffer_;
+  std::string to_;
+  std::string from_;
+};
+
+#endif // MOKA_IO_ICONV_H
 
 // vim: tabstop=2:sw=2:expandtab

@@ -124,8 +124,7 @@ v8::Handle<v8::Value> Module::Print(const v8::Arguments& args) {
     if (i != 0) {
       ::fputc(' ', stdout);
     }
-    v8::String::Utf8Value s(args[i]->ToString());
-    ::fwrite(*s, sizeof(**s), s.length(), stdout);
+    ::fprintf(stdout, "%s", *v8::String::Utf8Value(args[i]->ToString()));
   }
   ::fputc('\n', stdout);
   ::fflush(stdout);

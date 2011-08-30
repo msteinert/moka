@@ -113,6 +113,7 @@ ModulePointer ModuleFactory::NewSoModule(const char* id, const char* path) {
   // Invoke the dynamic linker to open the shared object
   void* handle = ::dlopen(file_name.c_str(), RTLD_LAZY);
   if (!handle) {
+    printf("> %s <\n", dlerror());
     return module;
   }
   // Create a new shared object module
