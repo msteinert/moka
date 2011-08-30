@@ -25,55 +25,31 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef MOKA_IO_STREAM_H
-#define MOKA_IO_STREAM_H
+#ifndef MOKA_IO_ERROR_H
+#define MOKA_IO_ERROR_H
 
-#include "moka/module.h"
+#include <moka/module.h>
 
 namespace moka {
 
 namespace io {
 
-class Stream;
+class Error;
 
 } // namespace io
 
 } // namespace moka
 
-class moka::io::Stream {
+class moka::io::Error: public Module::Exception {
 public:
+  static v8::Handle<v8::Value> New(const char* message);
+
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
 protected: // V8 interface methods
   static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Close(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Read(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Write(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Flush(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Fileno(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Isatty(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Tell(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Seek(const v8::Arguments& arguments);
-
-protected: // Protected methods
-  Stream() {}
-
-  virtual ~Stream() {}
-
-private: // Private methods
-  Stream(Stream const& that);
-
-  void operator=(Stream const& that);
 };
 
-#endif // MOKA_IO_STREAM_H
+#endif // MOKA_IO_ERROR_H
 
 // vim: tabstop=2:sw=2:expandtab

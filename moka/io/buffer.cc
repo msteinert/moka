@@ -155,6 +155,18 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
           }
         }
       }
+    } else if (arguments[0]->IsString()) {
+      self = new Buffer;
+      if (self) {
+        v8::String::Utf8Value string(arguments[0]->ToString());
+        size_t length = string.length();
+        v8::Handle<v8::Value> value = self->Construct(length);
+        if (value->IsUndefined()) {
+          delete self;
+          return handle_scope.Close(value);
+        }
+        ::memcpy(self->GetBuffer(), *string, length);
+      }
     } else {
       return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
               v8::String::New("Argument one must an integer or array"))));

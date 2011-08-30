@@ -30,7 +30,9 @@
 #endif
 
 #include "moka/io/buffer.h"
+#include "moka/io/error.h"
 #include "moka/io/iconv.h"
+#include "moka/io/stream.h"
 #include "moka/module.h"
 
 namespace moka {
@@ -47,8 +49,12 @@ static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
   v8::Handle<v8::Object> exports = value->ToObject();
   exports->Set(v8::String::NewSymbol("Buffer"),
       Buffer::GetTemplate()->GetFunction());
+  exports->Set(v8::String::NewSymbol("Error"),
+      Error::GetTemplate()->GetFunction());
   exports->Set(v8::String::NewSymbol("Iconv"),
       Iconv::GetTemplate()->GetFunction());
+  exports->Set(v8::String::NewSymbol("Stream"),
+      Stream::GetTemplate()->GetFunction());
   return handle_scope.Close(value);
 }
 

@@ -134,20 +134,34 @@ v8::Handle<v8::Value> Iconv::New(const v8::Arguments& arguments) {
     return Module::ConstructCall(GetTemplate(), arguments);
   }
   Iconv* self = NULL;
+  v8::Handle<v8::Value> from;
   switch (arguments.Length()) {
   case 2:
-    if (!arguments[0]->IsString() || !arguments[1]->IsString()) {
+    if (!arguments[1]->IsString()) {
       return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Arguments one and two must be strings"))));
+              v8::String::New("Argument two must be a string"))));
+    }
+    from = arguments[1]->ToString();
+    // Fall through
+  case 1:
+    if (!arguments[0]->IsString()) {
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be a string"))));
     }
     self = new Iconv;
     if (self) {
-      v8::Handle<v8::Value> value = self->Construct(
-          *v8::String::AsciiValue(arguments[0]->ToString()),
-          *v8::String::AsciiValue(arguments[1]->ToString()));
+      v8::Handle<v8::Value> value;
+      if (from.IsEmpty()) {
+        value = self->Construct(
+            *v8::String::AsciiValue(arguments[0]->ToString()), "UTF-8");
+      } else {
+        value = self->Construct(
+            *v8::String::AsciiValue(arguments[0]->ToString()),
+            *v8::String::AsciiValue(from));
+      }
       if (value->IsUndefined()) {
         delete self;
-        return handle_scope.Close(v8::ThrowException(value));
+        return handle_scope.Close(value);
       }
     }
     break;
@@ -233,15 +247,15 @@ v8::Handle<v8::Value> Iconv::ToString(const v8::Arguments& arguments) {
 v8::Handle<v8::Value> Iconv::Construct(const char* to, const char* from) {
   v8::HandleScope handle_scope;
   cd_ = iconv_open(to, from);
-  if (!cd_) {
+  if (cd_ == (iconv_t)-1) {
     if (EINVAL == errno) {
       std::string message("Conversion from ");
       message.append(from);
       message.append(" to ");
       message.append(to);
       message.append(" is not available");
-      return handle_scope.Close(v8::Exception::TypeError(
-            v8::String::New(message.c_str())));
+      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New(message.c_str()))));
     }
     return handle_scope.Close(v8::ThrowException(
           Module::ErrnoException::New(errno)));

@@ -25,55 +25,54 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef MOKA_IO_STREAM_H
-#define MOKA_IO_STREAM_H
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
-#include "moka/module.h"
+#include "moka/io/error.h"
 
 namespace moka {
 
 namespace io {
 
-class Stream;
+v8::Handle<v8::Value> Error::New(const char* message) {
+  v8::HandleScope handle_scope;
+  v8::Handle<v8::Value> argv[1] = { v8::String::New(message) };
+  return GetTemplate()->GetFunction()->NewInstance(1, argv);
+}
+
+v8::Handle<v8::FunctionTemplate> Error::GetTemplate() {
+  v8::HandleScope handle_scope;
+  static v8::Persistent<v8::FunctionTemplate> templ_;
+  if (!templ_.IsEmpty()) {
+    return templ_;
+  }
+  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
+  templ->Inherit(Module::Exception::GetTemplate());
+  templ->SetClassName(v8::String::NewSymbol("Error"));
+  templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
+  return templ_;
+}
+
+v8::Handle<v8::Value> Error::New(
+    const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  if (!arguments.IsConstructCall()) {
+    return Module::ConstructCall(GetTemplate(), arguments);
+  }
+  v8::Handle<v8::Object> self = arguments.This();
+  self->Set(v8::String::NewSymbol("name"),
+      v8::String::NewSymbol("Error"));
+  if (arguments.Length()) {
+    if (!arguments[0].IsEmpty()) {
+      self->Set(v8::String::NewSymbol("message"), arguments[0]);
+    }
+  }
+  return self;
+}
 
 } // namespace io
 
 } // namespace moka
-
-class moka::io::Stream {
-public:
-  static v8::Handle<v8::FunctionTemplate> GetTemplate();
-
-protected: // V8 interface methods
-  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Close(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Read(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Write(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Flush(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Fileno(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Isatty(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Tell(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Seek(const v8::Arguments& arguments);
-
-protected: // Protected methods
-  Stream() {}
-
-  virtual ~Stream() {}
-
-private: // Private methods
-  Stream(Stream const& that);
-
-  void operator=(Stream const& that);
-};
-
-#endif // MOKA_IO_STREAM_H
 
 // vim: tabstop=2:sw=2:expandtab

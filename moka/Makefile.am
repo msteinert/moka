@@ -47,9 +47,12 @@ module_LTLIBRARIES = \
 io_la_SOURCES = \
 	io/buffer.cc \
 	io/buffer.h \
+	io/error.cc \
+	io/error.h \
 	io/iconv.cc \
 	io/iconv.h \
 	io/module.cc \
+	io/stream.cc \
 	io/stream.h
 limits_la_SOURCES = \
 	limits/module.cc
