@@ -164,7 +164,7 @@ public:
     return module_;
   }
 
-public: // module helper functions
+public: // Module helper functions
   /**
    * \brief Require a module from C++
    *
@@ -183,6 +183,45 @@ public: // module helper functions
    *         undefined value.
    */
   static v8::Handle<v8::Value> Exports();
+
+  static v8::Handle<v8::Value> ConstructCall(
+      v8::Handle<v8::FunctionTemplate> function_templ,
+      const v8::Arguments& arguments);
+
+
+public: // Sub-classes
+  class MOKA_EXPORT Exception {
+  public:
+    static v8::Handle<v8::Value> New(
+        v8::Handle<v8::Value> message = v8::Handle<v8::Value>());
+
+    static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+  protected: // V8 interface methods
+    static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+
+    static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
+
+  protected: // Protected methods
+    Exception() {}
+
+    virtual ~Exception() {}
+
+  private: // Non-copyable
+    Exception(Module const& that);
+
+    void operator=(Exception const& that);
+  };
+
+  class MOKA_EXPORT ErrnoException: public Exception {
+  public:
+    static v8::Handle<v8::Value> New(int error);
+
+    static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+  protected: // V8 interface methods
+    static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+  };
 
 protected:
   /**

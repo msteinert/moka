@@ -25,40 +25,39 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef MOKA_EXCEPTION_H
-#define MOKA_EXCEPTION_H
+#ifndef MOKA_IO_STREAM_H
+#define MOKA_IO_STREAM_H
 
 #include "moka/module.h"
 
 namespace moka {
 
-class Exception;
+namespace io {
+
+class Stream;
+
+} // namespace io
 
 } // namespace moka
 
-class moka::Exception{
+class moka::io::Stream {
 public:
-  static v8::Handle<v8::Value> New(
-      v8::Handle<v8::Value> message = v8::Handle<v8::Value>());
-
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
 protected: // V8 interface methods
   static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
 
-  static v8::Handle<v8::Value> ToString(const v8::Arguments& arguments);
-
 protected: // Protected methods
-  Exception() {}
+  Stream() {}
 
-  virtual ~Exception() {}
+  virtual ~Stream() {}
 
 private: // Private methods
-  Exception(Exception const& that);
+  Stream(Exception const& that);
 
-  void operator=(Exception const& that);
+  void operator=(Stream const& that);
 };
 
-#endif // MOKA_EXCEPTION_H
+#endif // MOKA_IO_STREAM_H
 
 // vim: tabstop=2:sw=2:expandtab

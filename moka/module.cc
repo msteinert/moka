@@ -31,6 +31,7 @@
 #include "config.h"
 #endif
 
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -106,6 +107,11 @@ bool Module::Initialize() {
   }
   // Store 'module' as a persistent object
   module_ = v8::Persistent<v8::Object>::New(module);
+  // Create exceptions
+  module_->Set(v8::String::NewSymbol("Exception"),
+      Module::Exception::GetTemplate()->GetFunction());
+  module_->Set(v8::String::NewSymbol("ErrnoException"),
+      Module::ErrnoException::GetTemplate()->GetFunction());
   // Create 'module' object
   context_->Global()->Set(v8::String::NewSymbol("module"), module_);
   initialized_ = true;
@@ -178,6 +184,131 @@ v8::Handle<v8::Value> Module::Exports() {
           v8::String::New("Exports is empty"))));
   }
   return handle_scope.Close(exports);
+}
+
+
+v8::Handle<v8::Value> Module::ConstructCall(
+    v8::Handle<v8::FunctionTemplate> function_templ,
+    const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  int argc = arguments.Length();
+  v8::Local<v8::Value>* argv = static_cast<v8::Local<v8::Value>*>(
+      ::malloc(argc * sizeof(v8::Local<v8::Value>*)));
+  if (!argv) {
+    return handle_scope.Close(v8::ThrowException(
+          Module::ErrnoException::New(errno)));
+  }
+  for (int index = 0; index < argc; ++index) {
+    argv[index] = arguments[index];
+  }
+  v8::Local<v8::Object> instance =
+    function_templ->GetFunction()->NewInstance(argc, argv);
+  ::free(argv);
+  return handle_scope.Close(instance);
+}
+
+v8::Handle<v8::Value> Module::Exception::New(v8::Handle<v8::Value> message) {
+  v8::HandleScope handle_scope;
+  v8::Handle<v8::Object> object;
+  if (message.IsEmpty()) {
+    return GetTemplate()->GetFunction()->NewInstance();
+  } else {
+    v8::Handle<v8::Value> argv[1] = { message };
+    return GetTemplate()->GetFunction()->NewInstance(1, argv);
+  }
+}
+
+v8::Handle<v8::FunctionTemplate> Module::Exception::GetTemplate() {
+  v8::HandleScope handle_scope;
+  static v8::Persistent<v8::FunctionTemplate> templ_;
+  if (!templ_.IsEmpty()) {
+    return templ_;
+  }
+  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
+  templ->SetClassName(v8::String::NewSymbol("Exception"));
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("toString"),
+      v8::FunctionTemplate::New(ToString)->GetFunction());
+  templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
+  return templ_;
+}
+
+v8::Handle<v8::Value> Module::Exception::New(const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  if (!arguments.IsConstructCall()) {
+    return Module::ConstructCall(GetTemplate(), arguments);
+  }
+  v8::Handle<v8::Object> self = arguments.This();
+  self->Set(v8::String::NewSymbol("name"), v8::String::NewSymbol("Exception"));
+  if (arguments.Length()) {
+    if (!arguments[0].IsEmpty()) {
+      self->Set(v8::String::NewSymbol("message"), arguments[0]);
+    }
+  }
+  return self;
+}
+
+v8::Handle<v8::Value> Module::Exception::ToString(
+    const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  std::string string;
+  v8::Local<v8::Object> self = arguments.This();
+  v8::Local<v8::Value> name = self->Get(v8::String::NewSymbol("name"));
+  if (!name->Equals(v8::Undefined())) {
+    string.append(*v8::String::Utf8Value(name->ToString()));
+  }
+  v8::Local<v8::Value> message = self->Get(v8::String::NewSymbol("message"));
+  if (!message->Equals(v8::Undefined())) {
+    if (!string.empty()) {
+      string.append(": ");
+    }
+    string.append(*v8::String::Utf8Value(message->ToString()));
+  }
+  if (string.empty()) {
+    return handle_scope.Close(v8::Local<v8::String>());
+  }
+  return handle_scope.Close(v8::String::New(string.c_str()));
+}
+
+v8::Handle<v8::Value> Module::ErrnoException::New(int error) {
+  v8::HandleScope handle_scope;
+  v8::Handle<v8::Value> argv[1] = { v8::Integer::New(error) };
+  return GetTemplate()->GetFunction()->NewInstance(1, argv);
+}
+
+v8::Handle<v8::FunctionTemplate> Module::ErrnoException::GetTemplate() {
+  v8::HandleScope handle_scope;
+  static v8::Persistent<v8::FunctionTemplate> templ_;
+  if (!templ_.IsEmpty()) {
+    return templ_;
+  }
+  v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
+  templ->Inherit(Module::Exception::GetTemplate());
+  templ->SetClassName(v8::String::NewSymbol("ErrnoException"));
+  templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
+  return templ_;
+}
+
+v8::Handle<v8::Value> Module::ErrnoException::New(
+    const v8::Arguments& arguments) {
+  v8::HandleScope handle_scope;
+  if (!arguments.IsConstructCall()) {
+    return Module::ConstructCall(GetTemplate(), arguments);
+  }
+  v8::Handle<v8::Object> self = arguments.This();
+  self->Set(v8::String::NewSymbol("name"),
+      v8::String::NewSymbol("ErrnoException"));
+  if (arguments.Length()) {
+    if (!arguments[0].IsEmpty()) {
+      if (arguments[0]->IsInt32()) {
+        self->Set(v8::String::NewSymbol("message"),
+            v8::String::New(::strerror(arguments[0]->ToInteger()->Value())));
+        self->Set(v8::String::NewSymbol("errno"), arguments[0]);
+      } else {
+        self->Set(v8::String::NewSymbol("message"), arguments[0]);
+      }
+    }
+  }
+  return self;
 }
 
 } // namespace moka

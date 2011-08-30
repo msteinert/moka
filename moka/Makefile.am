@@ -41,11 +41,12 @@ $(bin_PROGRAMS): libmoka.la
 # Modules
 moduledir = $(libdir)/moka
 module_LTLIBRARIES = \
-	lang.la
-lang_la_SOURCES = \
-	lang/exception.cc \
-	lang/exception.h \
-	lang/module.cc
+	io.la
+io_la_SOURCES = \
+	io/buffer.cc \
+	io/buffer.h \
+	io/module.cc \
+	io/stream.h
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir)

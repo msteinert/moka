@@ -29,26 +29,30 @@
 #include "config.h"
 #endif
 
-#include "moka/lang/exception.h"
+#include "moka/io/buffer.h"
 #include "moka/module.h"
 
 namespace moka {
 
+namespace io {
+
 // Initialize module
-static v8::Handle<v8::Value> LangInitialize(int* argc, char*** argv) {
+static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
   v8::HandleScope handle_scope;
   v8::Handle<v8::Value> value = Module::Exports();
   if (value.IsEmpty() || value->IsUndefined()) {
     return handle_scope.Close(value);
   }
   v8::Handle<v8::Object> exports = value->ToObject();
-  exports->Set(v8::String::NewSymbol("Exception"),
-      Exception::GetTemplate()->GetFunction());
+  exports->Set(v8::String::NewSymbol("Buffer"),
+      Buffer::GetTemplate()->GetFunction());
   return handle_scope.Close(value);
 }
 
+} // namespace io
+
 } // namespace moka
 
-MOKA_MODULE(moka::LangInitialize)
+MOKA_MODULE(moka::io::Initialize)
 
 // vim: tabstop=2:sw=2:expandtab
