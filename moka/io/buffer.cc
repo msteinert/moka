@@ -61,14 +61,16 @@ v8::Handle<v8::Value> Buffer::Resize(size_t length) {
     if (!buffer) {
       return handle_scope.Close(Module::ErrnoException::New(errno));
     }
-    if (length_ > length) {
+    if (length > length_) {
       ::memset(buffer + length_, 0, length - length_);
     }
+    v8::V8::AdjustAmountOfExternalAllocatedMemory(length - length_);
     length_ = length;
     buffer_ = buffer;
   } else {
     if (buffer_) {
       ::free(buffer_);
+      v8::V8::AdjustAmountOfExternalAllocatedMemory(-length_);
       length_ = 0;
       buffer_ = NULL;
     }
@@ -117,6 +119,7 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
         v8::Handle<v8::Value> value = self->Construct(
             arguments[0]->ToUint32()->Value());
         if (value->IsUndefined()) {
+          delete self;
           return handle_scope.Close(v8::ThrowException(try_catch.ReThrow()));
         }
       }
@@ -129,6 +132,7 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
           size_t length = properties->Length();
           v8::Handle<v8::Value> value = self->Construct(length);
           if (value->IsUndefined()) {
+            delete self;
             return handle_scope.Close(v8::ThrowException(value));
           }
           for (size_t index = 0; index < length; ++index) {
@@ -150,9 +154,11 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
           v8::String::New("Zero or one argument(s) allowed")));
   }
   if (!self) {
+    delete self;
     return handle_scope.Close(v8::ThrowException(
           Module::ErrnoException::New(ENOMEM)));
   }
+  v8::V8::AdjustAmountOfExternalAllocatedMemory(sizeof(Buffer));
   v8::Persistent<v8::Object> buffer =
     v8::Persistent<v8::Object>::New(arguments.This());
   buffer->SetInternalField(0, v8::External::New(self));
@@ -162,6 +168,8 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
 
 void Buffer::Delete(v8::Persistent<v8::Value> object, void* parameters) {
   delete static_cast<Buffer*>(parameters);
+  v8::V8::AdjustAmountOfExternalAllocatedMemory(
+      -static_cast<int>(sizeof(Buffer)));
   object.Dispose();
   object.Clear();
 }
