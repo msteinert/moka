@@ -14,3 +14,26 @@ var d = cd2.convert(c);
 print(cd2 + ": " + d);
 
 print(new io.Buffer('\u00bd + \u00bc = \u00be'));
+
+var e = new io.Buffer(256);
+var f = io.FileStream('bar.txt', 'r+');
+print(f.read(e));
+print(e);
+f.seek(0);
+print(f.read(e));
+print(e);
+f.close();
+
+var stdout = new io.FileStream(1);
+stdout.write('Hello, World!\n');
+
+var stdin = new io.FileStream(0);
+while (true) {
+	stdout.write('>>> ');
+	var msg = new String;
+	while ('\n' != (c = stdin.read(1)))
+		msg += c;
+	if (msg.length) {
+		stdout.write(msg + '\n');
+	}
+}

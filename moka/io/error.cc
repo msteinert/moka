@@ -36,13 +36,11 @@ namespace moka {
 namespace io {
 
 v8::Handle<v8::Value> Error::New(const char* message) {
-  v8::HandleScope handle_scope;
   v8::Handle<v8::Value> argv[1] = { v8::String::New(message) };
   return GetTemplate()->GetFunction()->NewInstance(1, argv);
 }
 
 v8::Handle<v8::FunctionTemplate> Error::GetTemplate() {
-  v8::HandleScope handle_scope;
   static v8::Persistent<v8::FunctionTemplate> templ_;
   if (!templ_.IsEmpty()) {
     return templ_;
@@ -56,7 +54,6 @@ v8::Handle<v8::FunctionTemplate> Error::GetTemplate() {
 
 v8::Handle<v8::Value> Error::New(
     const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   if (!arguments.IsConstructCall()) {
     return Module::ConstructCall(GetTemplate(), arguments);
   }

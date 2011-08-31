@@ -51,16 +51,14 @@ Buffer::~Buffer() {
 }
 
 v8::Handle<v8::Value> Buffer::Resize(size_t length) {
-  v8::HandleScope handle_scope;
   if (length == length_) {
-    return handle_scope.Close(v8::Boolean::New(true));
+    return v8::True();
   }
   if (length) {
     char* buffer = static_cast<char*>(
         ::realloc(static_cast<void*>(buffer_), length));
     if (!buffer) {
-      return handle_scope.Close(v8::ThrowException(
-            Module::ErrnoException::New(errno)));
+      return v8::ThrowException(Module::ErrnoException::New(errno));
     }
     if (length > length_) {
       ::memset(buffer + length_, 0, length - length_);
@@ -76,31 +74,28 @@ v8::Handle<v8::Value> Buffer::Resize(size_t length) {
       buffer_ = NULL;
     }
   }
-  return handle_scope.Close(v8::Boolean::New(true));
+  return v8::True();
 }
 
 v8::Handle<v8::Value> Buffer::New(size_t length) {
-  v8::HandleScope handle_scope;
   v8::Handle<v8::Value> argv[1] = { v8::Integer::New(length) };
   return GetTemplate()->GetFunction()->NewInstance(1, argv);
 }
 
 v8::Handle<v8::Value> Buffer::New(const char* buffer, size_t length) {
-  v8::HandleScope handle_scope;
   v8::Handle<v8::Value> argv[1] = { v8::Integer::New(length) };
   v8::Handle<v8::Value> value =
     GetTemplate()->GetFunction()->NewInstance(1, argv);
   if (value->IsUndefined()) {
-    return handle_scope.Close(value);
+    return value;
   }
   Buffer* self = static_cast<Buffer*>(
       value->ToObject()->GetPointerFromInternalField(0));
   ::memcpy(self->buffer_, buffer, length);
-  return handle_scope.Close(value);
+  return value;
 }
 
 v8::Handle<v8::FunctionTemplate> Buffer::GetTemplate() {
-  v8::HandleScope handle_scope;
   static v8::Persistent<v8::FunctionTemplate> templ_;
   if (!templ_.IsEmpty()) {
     return templ_;
@@ -120,7 +115,6 @@ v8::Handle<v8::FunctionTemplate> Buffer::GetTemplate() {
 }
 
 v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   if (!arguments.IsConstructCall()) {
     return Module::ConstructCall(GetTemplate(), arguments);
   }
@@ -134,7 +128,7 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
             arguments[0]->ToUint32()->Value());
         if (value->IsUndefined()) {
           delete self;
-          return handle_scope.Close(value);
+          return value;
         }
       }
     } else if (arguments[0]->IsArray()) {
@@ -147,7 +141,7 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
           v8::Handle<v8::Value> value = self->Construct(length);
           if (value->IsUndefined()) {
             delete self;
-            return handle_scope.Close(value);
+            return value;
           }
           for (size_t index = 0; index < length; ++index) {
             self->SetIndex(index, array->Get(properties->Get(index))->
@@ -163,26 +157,24 @@ v8::Handle<v8::Value> Buffer::New(const v8::Arguments& arguments) {
         v8::Handle<v8::Value> value = self->Construct(length);
         if (value->IsUndefined()) {
           delete self;
-          return handle_scope.Close(value);
+          return value;
         }
         ::memcpy(self->GetBuffer(), *string, length);
       }
     } else {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must an integer or array"))));
+      return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must an integer or array")));
     }
     break;
   case 0:
     self = new Buffer;
     break;
   default:
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Zero or one argument(s) allowed"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Zero or one argument(s) allowed")));
   }
   if (!self) {
-    delete self;
-    return handle_scope.Close(v8::ThrowException(
-          Module::ErrnoException::New(ENOMEM)));
+    return v8::ThrowException(Module::ErrnoException::New(ENOMEM));
   }
   v8::V8::AdjustAmountOfExternalAllocatedMemory(sizeof(Buffer));
   v8::Persistent<v8::Object> buffer =
@@ -202,76 +194,68 @@ void Buffer::Delete(v8::Persistent<v8::Value> object, void* parameters) {
 
 v8::Handle<v8::Value> Buffer::LengthGet(v8::Local<v8::String> property,
     const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
   Buffer* self = static_cast<Buffer*>(
       info.This()->GetPointerFromInternalField(0));
-  return handle_scope.Close(v8::Uint32::New(self->length_));
+  return v8::Uint32::New(self->length_);
 }
 
 v8::Handle<v8::Value> Buffer::GetIndex(uint32_t index,
     const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
   Buffer* self = static_cast<Buffer*>(
       info.This()->GetPointerFromInternalField(0));
   if (index >= self->GetLength()) {
-    return handle_scope.Close(v8::ThrowException(v8::Exception::RangeError(
-            v8::String::New("Index is out of range"))));
+    return v8::ThrowException(v8::Exception::RangeError(
+            v8::String::New("Index is out of range")));
   }
-  return handle_scope.Close(v8::Uint32::New(self->GetIndex(index)));
+  return v8::Uint32::New(self->GetIndex(index));
 }
 
 v8::Handle<v8::Value> Buffer::SetIndex(uint32_t index,
     v8::Local<v8::Value> value, const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
   Buffer* self = static_cast<Buffer*>(
       info.This()->GetPointerFromInternalField(0));
   if (index < self->GetLength()) {
     self->SetIndex(index, value->ToUint32()->Value() & 0xff);
   } else {
-    return handle_scope.Close(v8::ThrowException(v8::Exception::RangeError(
-            v8::String::New("Index is out of range"))));
+    return v8::ThrowException(v8::Exception::RangeError(
+            v8::String::New("Index is out of range")));
   }
-  return handle_scope.Close(value);
+  return value;
 }
 
 v8::Handle<v8::Value> Buffer::Resize(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   Buffer* self = static_cast<Buffer*>(
       arguments.This()->GetPointerFromInternalField(0));
   switch (arguments.Length()) {
   case 1:
     if (!arguments[0]->IsUint32()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument must be an unsigned integer"))));
+      return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument must be an unsigned integer")));
     }
     return self->Resize(arguments[0]->ToUint32()->Value());
   default:
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("One argument allowed"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("One argument allowed")));
   }
 }
 
 v8::Handle<v8::Value> Buffer::ToString(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   Buffer* self = static_cast<Buffer*>(
       arguments.This()->GetPointerFromInternalField(0));
-  return handle_scope.Close(v8::String::New(self->GetBuffer(),
-        self->GetLength()));
+  return v8::String::New(self->GetBuffer(), self->GetLength());
 }
 
 v8::Handle<v8::Value> Buffer::Construct(size_t length) {
-  v8::HandleScope handle_scope;
   if (!length) {
-    return handle_scope.Close(v8::Boolean::New(true));
+    return v8::True();
   }
   buffer_ = static_cast<char*>(::calloc(1, length));
   if (!buffer_) {
-    return handle_scope.Close(v8::ThrowException(
-          Module::ErrnoException::New(errno)));
+    return v8::ThrowException(Module::ErrnoException::New(errno));
   }
   length_ = length;
   v8::V8::AdjustAmountOfExternalAllocatedMemory(length_);
-  return handle_scope.Close(v8::Boolean::New(true));
+  return v8::True();
 }
 
 } // namespace io

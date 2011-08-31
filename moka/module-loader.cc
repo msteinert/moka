@@ -207,16 +207,13 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
  *         function will throw a JavaScript exception.
  */
 v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   // Check the number of arguments
   if (arguments.Length() != 1) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("A single argument is required")));
+    return v8::ThrowException(v8::String::New("A single argument is required"));
   }
   // Verify that argument one is a string
   if (!arguments[0]->IsString()) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("Argument one must be a string")));
+    return v8::ThrowException(v8::String::New("Argument one must be a string"));
   }
   // Get the ModuleLoader pointer, i.e., 'this'
   std::string id(*v8::String::Utf8Value(arguments[0]));
@@ -226,8 +223,8 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
   ModuleLoader* module_loader = static_cast<ModuleLoader*>(external->Value());
   // Check if the ModuleLoader had been initialized properly
   if (!module_loader->initialized_) {
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New("Module loader is not initialized")));
+    return v8::ThrowException(
+        v8::String::New("Module loader is not initialized"));
   }
   // Determine if this is a relative path
   bool relative = false;
@@ -261,14 +258,13 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
       // Get the calling module
       ModulePointer previous_module = module_loader->module_stack_.top();
       if (!previous_module.get()) {
-        return handle_scope.Close(v8::ThrowException(
-              v8::String::New("Internal module loader error")));
+        return v8::ThrowException(
+            v8::String::New("Internal module loader error"));
       }
       // Get the source directory for the calling module
       const char* directory_name = previous_module->GetDirectoryName();
       if (!directory_name) {
-        return handle_scope.Close(v8::ThrowException(
-              v8::String::New("No memory")));
+        return v8::ThrowException(Module::ErrnoException::New(ENOMEM));
       }
       // Load the new module relative to the current one
       module = module_loader->module_factory_->NewModule(id.c_str(),
@@ -279,8 +275,7 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
     // The request module was not found, return an exception
     std::string error("No module named ");
     error.append(id);
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(error.c_str())));
+    return v8::ThrowException(v8::String::New(error.c_str()));
   }
   // The requested module was found, store it on the module stack
   module_loader->module_stack_.push(module);
@@ -293,15 +288,14 @@ v8::Handle<v8::Value> ModuleLoader::Require(const v8::Arguments& arguments) {
     module_loader->module_factory_->RemoveModule(module);
     std::string error("Failed to load module ");
     error.append(id);
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(error.c_str())));
+    return v8::ThrowException(v8::String::New(error.c_str()));
   } else if (exports->IsUndefined()) {
     // Failure, remove the module from the module store
     module_loader->module_factory_->RemoveModule(module);
-    return handle_scope.Close(exports);
+    return exports;
   }
   // Successfully loaded, return exports
-  return handle_scope.Close(exports);
+  return exports;
 }
 
 } // namespace moka

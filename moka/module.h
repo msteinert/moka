@@ -217,6 +217,8 @@ public: // Sub-classes
   public:
     static v8::Handle<v8::Value> New(int error);
 
+    static v8::Handle<v8::Value> New(const char* message, int error);
+
     static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
   protected: // V8 interface methods

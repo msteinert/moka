@@ -31,6 +31,7 @@
 
 #include "moka/io/buffer.h"
 #include "moka/io/error.h"
+#include "moka/io/file-stream.h"
 #include "moka/io/iconv.h"
 #include "moka/io/stream.h"
 #include "moka/module.h"
@@ -46,6 +47,9 @@ static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
   if (value.IsEmpty() || value->IsUndefined()) {
     return handle_scope.Close(value);
   }
+  v8::PropertyAttribute attributes =
+    static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
+  // IO Objects
   v8::Handle<v8::Object> exports = value->ToObject();
   exports->Set(v8::String::NewSymbol("Buffer"),
       Buffer::GetTemplate()->GetFunction());
@@ -55,6 +59,15 @@ static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
       Iconv::GetTemplate()->GetFunction());
   exports->Set(v8::String::NewSymbol("Stream"),
       Stream::GetTemplate()->GetFunction());
+  exports->Set(v8::String::NewSymbol("FileStream"),
+      FileStream::GetTemplate()->GetFunction());
+  // IO Constants
+  exports->Set(v8::String::NewSymbol("SEEK_SET"),
+      v8::Int32::New(SEEK_SET), attributes);
+  exports->Set(v8::String::NewSymbol("SEEK_CUR"),
+      v8::Int32::New(SEEK_CUR), attributes);
+  exports->Set(v8::String::NewSymbol("SEEK_END"),
+      v8::Int32::New(SEEK_END), attributes);
   return handle_scope.Close(value);
 }
 

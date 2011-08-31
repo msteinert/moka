@@ -38,7 +38,6 @@ namespace moka {
 namespace io {
 
 v8::Handle<v8::FunctionTemplate> Stream::GetTemplate() {
-  v8::HandleScope handle_scope;
   static v8::Persistent<v8::FunctionTemplate> templ_;
   if (!templ_.IsEmpty()) {
     return templ_;
@@ -62,131 +61,83 @@ v8::Handle<v8::FunctionTemplate> Stream::GetTemplate() {
       v8::FunctionTemplate::New(Tell)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("seek"),
       v8::FunctionTemplate::New(Seek)->GetFunction());
+  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("truncate"),
+      v8::FunctionTemplate::New(Seek)->GetFunction());
   // Properties
-  v8::PropertyAttribute attributes =
-    static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("closed"),
-      v8::True(), attributes);
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("readable"),
-      v8::False(), attributes);
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("writable"),
-      v8::False(), attributes);
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("seekable"),
-      v8::False(), attributes);
+  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("closed"),
+      ClosedGet);
+  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("readable"),
+      ReadableGet);
+  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("writable"),
+      WritableGet);
+  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("seekable"),
+      SeekableGet);
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
 
 v8::Handle<v8::Value> Stream::New(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   std::string message("Cannot instantiate the type ");
   message.append(*v8::String::AsciiValue(
         arguments.This()->GetConstructorName()));
-  return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New(message.c_str()))));
+  return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New(message.c_str())));
 }
 
 v8::Handle<v8::Value> Stream::Close(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  SetClosed(arguments.This(), true);
-  return handle_scope.Close(v8::Undefined());
+  return v8::Undefined();
 }
 
 v8::Handle<v8::Value> Stream::Read(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (GetClosed(arguments.This())) {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("read: Stream is closed")));
-  }  else {
-    if (GetReadable(arguments.This())) {
-      return handle_scope.Close(v8::ThrowException(
-            Error::New("read: Unsupported")));
-    } else {
-        return handle_scope.Close(v8::ThrowException(
-            Error::New("read: Stream is not readable")));
-    }
-  }
+  return v8::ThrowException(Error::New("read: Unsupported"));
 }
 
 v8::Handle<v8::Value> Stream::Write(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (GetClosed(arguments.This())) {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("write: Stream is closed")));
-  }  else {
-    if (GetWritable(arguments.This())) {
-      return handle_scope.Close(v8::ThrowException(
-            Error::New("write: Unsupported")));
-    } else {
-        return handle_scope.Close(v8::ThrowException(
-            Error::New("write: Stream is not readable")));
-    }
-  }
+  return v8::ThrowException(Error::New("write: Unsupported"));
 }
 
 v8::Handle<v8::Value> Stream::Flush(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (GetClosed(arguments.This())) {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("flush: Stream is closed")));
-  }  else {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("flush: Unsupported")));
-  }
+  return v8::ThrowException(Error::New("flush: Unsupported"));
 }
 
 v8::Handle<v8::Value> Stream::Fileno(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (GetClosed(arguments.This())) {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("fileno: Stream is closed")));
-  }  else {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("fileno: Unsupported")));
-  }
+  return v8::ThrowException(Error::New("fileno: Unsupported"));
 }
 
 v8::Handle<v8::Value> Stream::Isatty(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (GetClosed(arguments.This())) {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("isatty: Stream is closed")));
-  }  else {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("isatty: Unsupported")));
-  }
+  return v8::ThrowException(Error::New("isatty: Unsupported"));
 }
 
 v8::Handle<v8::Value> Stream::Tell(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (GetClosed(arguments.This())) {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("tell: Stream is closed")));
-  }  else {
-    if (GetSeekable(arguments.This())) {
-      return handle_scope.Close(v8::ThrowException(
-            Error::New("tell: Unsupported")));
-    } else {
-      return handle_scope.Close(v8::ThrowException(
-            Error::New("tell: Stream is not seekable")));
-    }
-  }
+  return v8::ThrowException(Error::New("tell: Unsupported"));
 }
 
 v8::Handle<v8::Value> Stream::Seek(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
-  if (GetClosed(arguments.This())) {
-    return handle_scope.Close(v8::ThrowException(
-          Error::New("seek: Stream is closed")));
-  }  else {
-    if (GetSeekable(arguments.This())) {
-      return handle_scope.Close(v8::ThrowException(
-            Error::New("seek: Unsupported")));
-    } else {
-        return handle_scope.Close(v8::ThrowException(
-            Error::New("seek: Stream is not seekable")));
-    }
-  }
+  return v8::ThrowException(Error::New("seek: Unsupported"));
+}
+
+v8::Handle<v8::Value> Stream::Truncate(const v8::Arguments& arguments) {
+  return v8::ThrowException(Error::New("truncate: Unsupported"));
+}
+
+v8::Handle<v8::Value> Stream::ClosedGet(v8::Local<v8::String> property,
+    const v8::AccessorInfo &info) {
+  return v8::True();
+}
+
+v8::Handle<v8::Value> Stream::ReadableGet(v8::Local<v8::String> property,
+    const v8::AccessorInfo &info) {
+  return v8::False();
+}
+
+v8::Handle<v8::Value> Stream::WritableGet(v8::Local<v8::String> property,
+    const v8::AccessorInfo &info) {
+  return v8::False();
+}
+
+v8::Handle<v8::Value> Stream::SeekableGet(v8::Local<v8::String> property,
+    const v8::AccessorInfo &info) {
+  return v8::False();
 }
 
 } // namespace io

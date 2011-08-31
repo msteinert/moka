@@ -25,35 +25,112 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef MOKA_IO_STREAM_H
-#define MOKA_IO_STREAM_H
+#ifndef MOKA_IO_FILE_STREAM_H
+#define MOKA_IO_FILE_STREAM_H
 
-#include "moka/module.h"
+#include "moka/io/stream.h"
 
 namespace moka {
 
 namespace io {
 
-class Stream;
+class Buffer;
+class FileStream;
 
 } // namespace io
 
 } // namespace moka
 
-class moka::io::Stream {
+class moka::io::FileStream: public moka::io::Stream {
 public:
+  static v8::Handle<v8::Value> New(const char* file_name, const char* mode);
+
+  static v8::Handle<v8::Value> New(int fd);
+
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+  v8::Handle<v8::Value> Close();
+
+  /**
+   * \brief Read Buffer.length bytes into a buffer
+   *
+   * \param buffer [in/out] The buffer to read into
+   *
+   * \return The number of bytes read.
+   */
+  v8::Handle<v8::Value> Read(Buffer* buffer);
+
+  /**
+   * \brief Read bytes into a buffer
+   *
+   * \param buffer [in/out] The buffer to read into
+   * \param count [in] The number of bytes to read
+   *
+   * \return The number of bytes read.
+   */
+  v8::Handle<v8::Value> Read(Buffer* buffer, size_t count);
+
+  /**
+   * \brief Read bytes into a buffer starting from an offset
+   *
+   * \param buffer [in/out] The buffer to read into
+   * \param offset [in] The offset in buffer to start writing to
+   * \param count [in] The number of bytes to read
+   *
+   * \return The number of bytes read.
+   */
+  v8::Handle<v8::Value> Read(Buffer* buffer, size_t offset, size_t count);
+
+  v8::Handle<v8::Value> Read(char* buffer, size_t offset, size_t count);
+
+  v8::Handle<v8::Value> Read();
+
+  v8::Handle<v8::Value> Read(size_t count);
+
+  v8::Handle<v8::Value> Write(Buffer* buffer);
+
+  v8::Handle<v8::Value> Write(v8::String::Utf8Value& string);
+
+  v8::Handle<v8::Value> Write(Buffer* buffer, size_t count);
+
+  v8::Handle<v8::Value> Write(v8::String::Utf8Value& string, size_t count);
+
+  v8::Handle<v8::Value> Write(Buffer* buffer, size_t offset, size_t count);
+
+  v8::Handle<v8::Value> Write(v8::String::Utf8Value& string, size_t offset,
+      size_t count);
+
+  v8::Handle<v8::Value> Write(const char* buffer, size_t offset, size_t count);
+
+  v8::Handle<v8::Value> Fileno();
+
+  v8::Handle<v8::Value> Isatty();
+
+  /**
+   * \return The absolute position.
+   */
+  v8::Handle<v8::Value> Tell();
+
+  /**
+   * \return The new absolute position.
+   */
+  v8::Handle<v8::Value> Seek(off_t offset, int whence = SEEK_SET);
+
+  /**
+   * \return The new file size.
+   */
+  v8::Handle<v8::Value> Truncate(off_t length = 0);
 
 protected: // V8 interface methods
   static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+
+  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
 
   static v8::Handle<v8::Value> Close(const v8::Arguments& arguments);
 
   static v8::Handle<v8::Value> Read(const v8::Arguments& arguments);
 
   static v8::Handle<v8::Value> Write(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Flush(const v8::Arguments& arguments);
 
   static v8::Handle<v8::Value> Fileno(const v8::Arguments& arguments);
 
@@ -78,16 +155,26 @@ protected: // V8 interface methods
       const v8::AccessorInfo &info);
 
 protected: // Protected methods
-  Stream() {}
+  v8::Handle<v8::Value> Construct(const char* file_name, int mode);
 
-  virtual ~Stream() {}
+  v8::Handle<v8::Value> Construct(int fd);
+
+  FileStream();
+
+  virtual ~FileStream();
 
 private: // Private methods
-  Stream(Stream const& that);
+  FileStream(FileStream const& that);
 
-  void operator=(Stream const& that);
+  void operator=(FileStream const& that);
+
+private: // Private data
+  int fileno_;
+  bool readable_;
+  bool writable_;
+  bool seekable_;
 };
 
-#endif // MOKA_IO_STREAM_H
+#endif // MOKA_IO_FILE_STREAM_H
 
 // vim: tabstop=2:sw=2:expandtab

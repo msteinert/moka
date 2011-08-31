@@ -49,6 +49,8 @@ io_la_SOURCES = \
 	io/buffer.h \
 	io/error.cc \
 	io/error.h \
+	io/file-stream.cc \
+	io/file-stream.h \
 	io/iconv.cc \
 	io/iconv.h \
 	io/module.cc \

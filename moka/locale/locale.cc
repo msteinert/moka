@@ -42,29 +42,28 @@ namespace moka {
 namespace locale {
 
 v8::Handle<v8::Value> SetLocale(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   int category;
   v8::Handle<v8::String> locale;
   switch (arguments.Length()) {
   case 2:
     if (!arguments[1]->IsUndefined()) {
       if (!arguments[1]->IsString()) {
-        return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-                v8::String::New("Argument two must be a string"))));
+        return v8::ThrowException(v8::Exception::TypeError(
+                v8::String::New("Argument two must be a string")));
       }
       locale = arguments[1]->ToString();
     }
     // Fall through
   case 1:
     if (!arguments[0]->IsInt32()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must be an integer"))));
+      return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be an integer")));
     }
     category = arguments[0]->ToInt32()->Value();
     break;
   default:
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("One or two arguments allowed"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("One or two arguments allowed")));
   }
   char* current = NULL;
   if (locale.IsEmpty()) {
@@ -73,25 +72,24 @@ v8::Handle<v8::Value> SetLocale(const v8::Arguments& arguments) {
     current = ::setlocale(category, *v8::String::AsciiValue(locale));
   }
   if (current) {
-    return handle_scope.Close(v8::String::New(current));
+    return v8::String::New(current);
   } else {
-    return handle_scope.Close(v8::Undefined());
+    return v8::Undefined();
   }
 }
 
 v8::Handle<v8::Value> LocaleConv(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   switch (arguments.Length()) {
   case 0:
     // Do nothing
     break;
   default:
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Zero arguments allowed"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Zero arguments allowed")));
   }
   struct lconv* conv = localeconv();
   if (!conv) {
-    return handle_scope.Close(v8::Undefined());
+    return v8::Undefined();
   }
   v8::Local<v8::Object> object = v8::Object::New();
   // Numeric settings
@@ -142,41 +140,40 @@ v8::Handle<v8::Value> LocaleConv(const v8::Arguments& arguments) {
   monetary->Set(v8::String::NewSymbol("int_frac_digits"),
       v8::Number::New(conv->int_frac_digits));
   monetary->Set(v8::String::NewSymbol("p_cs_precedes"),
-      v8::Boolean::New(conv->p_cs_precedes ? true : false));
+      conv->p_cs_precedes ? v8::True() : v8::False());
   monetary->Set(v8::String::NewSymbol("p_sep_by_space"),
-      v8::Boolean::New(conv->p_sep_by_space ? true : false));
+      conv->p_sep_by_space ? v8::True() : v8::False());
   monetary->Set(v8::String::NewSymbol("n_cs_precedes"),
-      v8::Boolean::New(conv->n_cs_precedes ? true : false));
+      conv->n_cs_precedes ? v8::True() : v8::False());
   monetary->Set(v8::String::NewSymbol("n_sep_by_space"),
-      v8::Boolean::New(conv->n_sep_by_space ? true : false));
+      conv->n_sep_by_space ? v8::True() : v8::False());
   monetary->Set(v8::String::NewSymbol("p_sign_posn"),
       v8::Number::New(conv->p_sign_posn));
   monetary->Set(v8::String::NewSymbol("n_sign_posn"),
       v8::Number::New(conv->n_sign_posn));
   object->Set(v8::String::NewSymbol("LC_MONETARY"), monetary);
-  return handle_scope.Close(object);
+  return object;
 }
 
 v8::Handle<v8::Value> NlLangInfo(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   nl_item item;
   switch (arguments.Length()) {
   case 1:
     if (!arguments[0]->IsInt32()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must be an integer"))));
+      return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be an integer")));
     }
     item = arguments[0]->ToInt32()->Value();
     break;
   default:
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("One argument allowed"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("One argument allowed")));
   }
   char* info = nl_langinfo(item);
   if (info) {
-    return handle_scope.Close(v8::String::New(info));
+    return v8::String::New(info);
   } else {
-    return handle_scope.Close(v8::Undefined());
+    return v8::Undefined();
   }
 }
 

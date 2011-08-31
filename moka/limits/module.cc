@@ -43,26 +43,47 @@ static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
   if (value.IsEmpty() || value->IsUndefined()) {
     return handle_scope.Close(value);
   }
+  v8::PropertyAttribute attributes =
+    static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
   v8::Handle<v8::Object> exports = value->ToObject();
-  exports->Set(v8::String::NewSymbol("CHAR_BIT"), v8::Number::New(CHAR_BIT));
-  exports->Set(v8::String::NewSymbol("SCHAR_MIN"), v8::Number::New(SCHAR_MIN));
-  exports->Set(v8::String::NewSymbol("SCHAR_MAX"), v8::Number::New(SCHAR_MAX));
-  exports->Set(v8::String::NewSymbol("UCHAR_MAX"), v8::Number::New(UCHAR_MAX));
-  exports->Set(v8::String::NewSymbol("CHAR_MIN"), v8::Number::New(CHAR_MIN));
-  exports->Set(v8::String::NewSymbol("CHAR_MAX"), v8::Number::New(CHAR_MAX));
-  exports->Set(v8::String::NewSymbol("MB_LEN_MAX"), v8::Number::New(MB_LEN_MAX));
-  exports->Set(v8::String::NewSymbol("SHRT_MIN"), v8::Number::New(SHRT_MIN));
-  exports->Set(v8::String::NewSymbol("SHRT_MAX"), v8::Number::New(SHRT_MAX));
-  exports->Set(v8::String::NewSymbol("USHRT_MAX"), v8::Number::New(USHRT_MAX));
-  exports->Set(v8::String::NewSymbol("INT_MIN"), v8::Number::New(INT_MIN));
-  exports->Set(v8::String::NewSymbol("INT_MAX"), v8::Number::New(INT_MAX));
-  exports->Set(v8::String::NewSymbol("UINT_MAX"), v8::Number::New(UINT_MAX));
-  exports->Set(v8::String::NewSymbol("LONG_MIN"), v8::Number::New(LONG_MIN));
-  exports->Set(v8::String::NewSymbol("LONG_MAX"), v8::Number::New(LONG_MAX));
-  exports->Set(v8::String::NewSymbol("ULONG_MAX"), v8::Number::New(ULONG_MAX));
-  exports->Set(v8::String::NewSymbol("LLONG_MIN"), v8::Number::New(LLONG_MIN));
-  exports->Set(v8::String::NewSymbol("LLONG_MAX"), v8::Number::New(LLONG_MAX));
-  exports->Set(v8::String::NewSymbol("ULONG_MAX"), v8::Number::New(ULONG_MAX));
+  exports->Set(v8::String::NewSymbol("CHAR_BIT"), v8::Number::New(CHAR_BIT),
+      attributes);
+  exports->Set(v8::String::NewSymbol("SCHAR_MIN"), v8::Number::New(SCHAR_MIN),
+      attributes);
+  exports->Set(v8::String::NewSymbol("SCHAR_MAX"), v8::Number::New(SCHAR_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("UCHAR_MAX"), v8::Number::New(UCHAR_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("CHAR_MIN"), v8::Number::New(CHAR_MIN),
+      attributes);
+  exports->Set(v8::String::NewSymbol("CHAR_MAX"), v8::Number::New(CHAR_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("MB_LEN_MAX"), v8::Number::New(MB_LEN_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("SHRT_MIN"), v8::Number::New(SHRT_MIN),
+      attributes);
+  exports->Set(v8::String::NewSymbol("SHRT_MAX"), v8::Number::New(SHRT_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("USHRT_MAX"), v8::Number::New(USHRT_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("INT_MIN"), v8::Number::New(INT_MIN),
+      attributes);
+  exports->Set(v8::String::NewSymbol("INT_MAX"), v8::Number::New(INT_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("UINT_MAX"), v8::Number::New(UINT_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("LONG_MIN"), v8::Number::New(LONG_MIN),
+      attributes);
+  exports->Set(v8::String::NewSymbol("LONG_MAX"), v8::Number::New(LONG_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("ULONG_MAX"), v8::Number::New(ULONG_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("LLONG_MIN"), v8::Number::New(LLONG_MIN),
+      attributes);
+  exports->Set(v8::String::NewSymbol("LLONG_MAX"), v8::Number::New(LLONG_MAX),
+      attributes);
+  exports->Set(v8::String::NewSymbol("ULONG_MAX"), v8::Number::New(ULONG_MAX),
+      attributes);
   return handle_scope.Close(value);
 }
 

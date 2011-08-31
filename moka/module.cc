@@ -119,7 +119,6 @@ bool Module::Initialize() {
 }
 
 v8::Handle<v8::Value> Module::Print(const v8::Arguments& args) {
-  v8::HandleScope handle_scope;
   for (int i = 0; i < args.Length(); ++i) {
     if (i != 0) {
       ::fputc(' ', stdout);
@@ -128,7 +127,7 @@ v8::Handle<v8::Value> Module::Print(const v8::Arguments& args) {
   }
   ::fputc('\n', stdout);
   ::fflush(stdout);
-  return handle_scope.Close(v8::Handle<v8::Value>());
+  return v8::Handle<v8::Value>();
 }
 
 const char* Module::GetDirectoryName() {
@@ -185,17 +184,14 @@ v8::Handle<v8::Value> Module::Exports() {
   return handle_scope.Close(exports);
 }
 
-
 v8::Handle<v8::Value> Module::ConstructCall(
     v8::Handle<v8::FunctionTemplate> function_templ,
     const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   int argc = arguments.Length();
   v8::Local<v8::Value>* argv = static_cast<v8::Local<v8::Value>*>(
       ::malloc(argc * sizeof(v8::Local<v8::Value>*)));
   if (!argv) {
-    return handle_scope.Close(v8::ThrowException(
-          Module::ErrnoException::New(errno)));
+    return v8::ThrowException(Module::ErrnoException::New(errno));
   }
   for (int index = 0; index < argc; ++index) {
     argv[index] = arguments[index];
@@ -203,11 +199,10 @@ v8::Handle<v8::Value> Module::ConstructCall(
   v8::Local<v8::Object> instance =
     function_templ->GetFunction()->NewInstance(argc, argv);
   ::free(argv);
-  return handle_scope.Close(instance);
+  return instance;
 }
 
 v8::Handle<v8::Value> Module::Exception::New(v8::Handle<v8::Value> message) {
-  v8::HandleScope handle_scope;
   v8::Handle<v8::Object> object;
   if (message.IsEmpty()) {
     return GetTemplate()->GetFunction()->NewInstance();
@@ -218,7 +213,6 @@ v8::Handle<v8::Value> Module::Exception::New(v8::Handle<v8::Value> message) {
 }
 
 v8::Handle<v8::FunctionTemplate> Module::Exception::GetTemplate() {
-  v8::HandleScope handle_scope;
   static v8::Persistent<v8::FunctionTemplate> templ_;
   if (!templ_.IsEmpty()) {
     return templ_;
@@ -232,7 +226,6 @@ v8::Handle<v8::FunctionTemplate> Module::Exception::GetTemplate() {
 }
 
 v8::Handle<v8::Value> Module::Exception::New(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   if (!arguments.IsConstructCall()) {
     return Module::ConstructCall(GetTemplate(), arguments);
   }
@@ -248,7 +241,6 @@ v8::Handle<v8::Value> Module::Exception::New(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Module::Exception::ToString(
     const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   std::string string;
   v8::Local<v8::Object> self = arguments.This();
   v8::Local<v8::Value> name = self->Get(v8::String::NewSymbol("name"));
@@ -262,20 +254,24 @@ v8::Handle<v8::Value> Module::Exception::ToString(
     }
     string.append(*v8::String::Utf8Value(message->ToString()));
   }
-  if (string.empty()) {
-    return handle_scope.Close(v8::Local<v8::String>());
-  }
-  return handle_scope.Close(v8::String::New(string.c_str()));
+  return v8::String::New(string.c_str());
 }
 
 v8::Handle<v8::Value> Module::ErrnoException::New(int error) {
-  v8::HandleScope handle_scope;
   v8::Handle<v8::Value> argv[1] = { v8::Integer::New(error) };
   return GetTemplate()->GetFunction()->NewInstance(1, argv);
 }
 
+v8::Handle<v8::Value> Module::ErrnoException::New(const char* message,
+    int error) {
+  v8::Handle<v8::Value> argv[2] = {
+    v8::String::New(message),
+    v8::Integer::New(error)
+  };
+  return GetTemplate()->GetFunction()->NewInstance(2, argv);
+}
+
 v8::Handle<v8::FunctionTemplate> Module::ErrnoException::GetTemplate() {
-  v8::HandleScope handle_scope;
   static v8::Persistent<v8::FunctionTemplate> templ_;
   if (!templ_.IsEmpty()) {
     return templ_;
@@ -289,23 +285,43 @@ v8::Handle<v8::FunctionTemplate> Module::ErrnoException::GetTemplate() {
 
 v8::Handle<v8::Value> Module::ErrnoException::New(
     const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   if (!arguments.IsConstructCall()) {
     return Module::ConstructCall(GetTemplate(), arguments);
   }
   v8::Handle<v8::Object> self = arguments.This();
   self->Set(v8::String::NewSymbol("name"),
       v8::String::NewSymbol("ErrnoException"));
-  if (arguments.Length()) {
-    if (!arguments[0].IsEmpty()) {
-      if (arguments[0]->IsInt32()) {
-        self->Set(v8::String::NewSymbol("message"),
-            v8::String::New(::strerror(arguments[0]->ToInteger()->Value())));
-        self->Set(v8::String::NewSymbol("errno"), arguments[0]);
-      } else {
-        self->Set(v8::String::NewSymbol("message"), arguments[0]);
+  switch (arguments.Length()) {
+  case 2:
+    if (arguments[0]->IsString()) {
+      std::string message(*v8::String::Utf8Value(arguments[0]->ToString()));
+      if (arguments[1]->IsInt32()) {
+        message.append(": ");
+        message.append(::strerror(arguments[1]->ToInteger()->Value()));
+        self->Set(v8::String::NewSymbol("errno"), arguments[1]);
       }
+      self->Set(v8::String::NewSymbol("message"),
+          v8::String::New(message.c_str()));
+    } else if (arguments[0]->IsInt32()) {
+      self->Set(v8::String::NewSymbol("message"),
+          v8::String::New(::strerror(arguments[0]->ToInteger()->Value())));
+      self->Set(v8::String::NewSymbol("errno"), arguments[0]);
+
+    } else {
+      self->Set(v8::String::NewSymbol("message"), arguments[0]);
     }
+    break;
+  case 1:
+    if (arguments[0]->IsInt32()) {
+      self->Set(v8::String::NewSymbol("message"),
+          v8::String::New(::strerror(arguments[0]->ToInteger()->Value())));
+      self->Set(v8::String::NewSymbol("errno"), arguments[0]);
+    } else {
+      self->Set(v8::String::NewSymbol("message"), arguments[0]);
+    }
+    break;
+  default:
+    break;
   }
   return self;
 }

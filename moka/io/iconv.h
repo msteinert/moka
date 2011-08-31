@@ -29,7 +29,6 @@
 #define MOKA_IO_ICONV_H
 
 #include <iconv.h>
-#include "moka/io/buffer.h"
 #include "moka/module.h"
 #include <string>
 
@@ -37,6 +36,7 @@ namespace moka {
 
 namespace io {
 
+class Buffer;
 class Iconv;
 
 } // namespace io

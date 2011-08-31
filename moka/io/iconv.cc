@@ -31,6 +31,7 @@
 
 #include <cerrno>
 #include <cstdlib>
+#include "moka/io/buffer.h"
 #include "moka/io/iconv.h"
 
 namespace moka {
@@ -52,14 +53,13 @@ Iconv::~Iconv() {
 }
 
 v8::Handle<v8::Value> Iconv::Convert(Buffer* in) {
-  v8::HandleScope handle_scope;
   size_t size = in->GetLength() * sizeof(wchar_t);
   if (!size) {
-    return handle_scope.Close(Buffer::New(0));
+    return Buffer::New(0);
   }
   v8::Handle<v8::Value> value = EnsureBuffer(size);
   if (value->IsUndefined()) {
-    return handle_scope.Close(value);
+    return value;
   }
   size_t inbytesleft = in->GetLength();
   char* inbuf = in->GetBuffer();
@@ -77,7 +77,7 @@ v8::Handle<v8::Value> Iconv::Convert(Buffer* in) {
       value = EnsureBuffer(size);
       if (value->IsUndefined()) {
         ::iconv(cd_, NULL, NULL, &outbuf, &outbytesleft);
-        return handle_scope.Close(value);
+        return value;
       }
       inbytesleft = in->GetLength();
       inbuf = in->GetBuffer();
@@ -87,20 +87,22 @@ v8::Handle<v8::Value> Iconv::Convert(Buffer* in) {
     } else {
       // Unrecoverable error
       ::iconv(cd_, NULL, NULL, &outbuf, &outbytesleft);
-      return handle_scope.Close(v8::ThrowException(
-            Module::ErrnoException::New(errno)));
+      return v8::ThrowException(Module::ErrnoException::New(errno));
     }
   }
   ::iconv(cd_, NULL, NULL, &outbuf, &outbytesleft);
+  v8::Handle<v8::Value> buffer = Buffer::New(buffer_, outbuf - buffer_);
+  if (buffer->IsUndefined()) {
+    return buffer;
+  }
   value = PruneBuffer();
   if (value->IsUndefined()) {
-    return handle_scope.Close(value);
+    return value;
   }
-  return handle_scope.Close(Buffer::New(buffer_, outbuf - buffer_));
+  return buffer;
 }
 
 v8::Handle<v8::Value> Iconv::New(const char* to, const char* from) {
-  v8::HandleScope handle_scope;
   v8::Handle<v8::Value> argv[2] = {
     v8::String::New(to),
     v8::String::New(from)
@@ -109,7 +111,6 @@ v8::Handle<v8::Value> Iconv::New(const char* to, const char* from) {
 }
 
 v8::Handle<v8::FunctionTemplate> Iconv::GetTemplate() {
-  v8::HandleScope handle_scope;
   static v8::Persistent<v8::FunctionTemplate> templ_;
   if (!templ_.IsEmpty()) {
     return templ_;
@@ -129,7 +130,6 @@ v8::Handle<v8::FunctionTemplate> Iconv::GetTemplate() {
 }
 
 v8::Handle<v8::Value> Iconv::New(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   if (!arguments.IsConstructCall()) {
     return Module::ConstructCall(GetTemplate(), arguments);
   }
@@ -138,15 +138,15 @@ v8::Handle<v8::Value> Iconv::New(const v8::Arguments& arguments) {
   switch (arguments.Length()) {
   case 2:
     if (!arguments[1]->IsString()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument two must be a string"))));
+      return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument two must be a string")));
     }
     from = arguments[1]->ToString();
     // Fall through
   case 1:
     if (!arguments[0]->IsString()) {
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must be a string"))));
+      return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be a string")));
     }
     self = new Iconv;
     if (self) {
@@ -161,18 +161,17 @@ v8::Handle<v8::Value> Iconv::New(const v8::Arguments& arguments) {
       }
       if (value->IsUndefined()) {
         delete self;
-        return handle_scope.Close(value);
+        return value;
       }
     }
     break;
   default:
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Two arguments allowed"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Two arguments allowed")));
   }
   if (!self) {
     delete self;
-    return handle_scope.Close(v8::ThrowException(
-          Module::ErrnoException::New(ENOMEM)));
+    return v8::ThrowException(Module::ErrnoException::New(ENOMEM));
   }
   v8::V8::AdjustAmountOfExternalAllocatedMemory(sizeof(Iconv));
   v8::Persistent<v8::Object> cd =
@@ -192,22 +191,19 @@ void Iconv::Delete(v8::Persistent<v8::Value> object, void* parameters) {
 
 v8::Handle<v8::Value> Iconv::ToGet(v8::Local<v8::String> property,
     const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
   Iconv* self = static_cast<Iconv*>(
       info.This()->GetPointerFromInternalField(0));
-  return handle_scope.Close(v8::String::New(self->to_.c_str()));
+  return v8::String::New(self->to_.c_str());
 }
 
 v8::Handle<v8::Value> Iconv::FromGet(v8::Local<v8::String> property,
     const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
   Iconv* self = static_cast<Iconv*>(
       info.This()->GetPointerFromInternalField(0));
-  return handle_scope.Close(v8::String::New(self->from_.c_str()));
+  return v8::String::New(self->from_.c_str());
 }
 
 v8::Handle<v8::Value> Iconv::Convert(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   switch (arguments.Length()) {
   case 1:
     if (arguments[0]->IsObject()) {
@@ -219,19 +215,18 @@ v8::Handle<v8::Value> Iconv::Convert(const v8::Arguments& arguments) {
             object->GetPointerFromInternalField(0));
         return self->Convert(buffer);
       }
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument must be of type Buffer"))));
+      return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument must be of type Buffer")));
     }
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument must be an object"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument must be an object")));
   default:
-    return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("One argument allowed"))));
+    return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("One argument allowed")));
   }
 }
 
 v8::Handle<v8::Value> Iconv::ToString(const v8::Arguments& arguments) {
-  v8::HandleScope handle_scope;
   Iconv* self = static_cast<Iconv*>(
       arguments.This()->GetPointerFromInternalField(0));
   std::string string(*v8::String::Utf8Value(
@@ -241,11 +236,10 @@ v8::Handle<v8::Value> Iconv::ToString(const v8::Arguments& arguments) {
   string.append("', '");
   string.append(self->from_);
   string.append("')");
-  return handle_scope.Close(v8::String::New(string.c_str()));
+  return v8::String::New(string.c_str());
 }
 
 v8::Handle<v8::Value> Iconv::Construct(const char* to, const char* from) {
-  v8::HandleScope handle_scope;
   cd_ = iconv_open(to, from);
   if (cd_ == (iconv_t)-1) {
     if (EINVAL == errno) {
@@ -254,19 +248,17 @@ v8::Handle<v8::Value> Iconv::Construct(const char* to, const char* from) {
       message.append(" to ");
       message.append(to);
       message.append(" is not available");
-      return handle_scope.Close(v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New(message.c_str()))));
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New(message.c_str())));
     }
-    return handle_scope.Close(v8::ThrowException(
-          Module::ErrnoException::New(errno)));
+    return v8::ThrowException(Module::ErrnoException::New(errno));
   }
   to_.assign(to);
   from_.assign(from);
-  return handle_scope.Close(v8::Boolean::New(true));
+  return v8::True();
 }
 
 v8::Handle<v8::Value> Iconv::EnsureBuffer(size_t length) {
-  v8::HandleScope handle_scope;
   if (length_ < length) {
     if (length < BUFSIZ) {
       length = BUFSIZ;
@@ -274,30 +266,27 @@ v8::Handle<v8::Value> Iconv::EnsureBuffer(size_t length) {
     char* buffer = static_cast<char*>(
         ::realloc(static_cast<void*>(buffer_), length));
     if (!buffer) {
-      return handle_scope.Close(v8::ThrowException(
-            Module::ErrnoException::New(errno)));
+      return v8::ThrowException(Module::ErrnoException::New(errno));
     }
     v8::V8::AdjustAmountOfExternalAllocatedMemory(length - length_);
     buffer_ = buffer;
     length_ = length;
   }
-  return handle_scope.Close(v8::Boolean::New(true));
+  return v8::True();
 }
 
 v8::Handle<v8::Value> Iconv::PruneBuffer() {
-  v8::HandleScope handle_scope;
   if (BUFSIZ < length_) {
     char* buffer = static_cast<char*>(
         ::realloc(static_cast<void*>(buffer_), BUFSIZ));
     if (!buffer) {
-      return handle_scope.Close(v8::ThrowException(
-            Module::ErrnoException::New(errno)));
+      return v8::ThrowException(Module::ErrnoException::New(errno));
     }
     v8::V8::AdjustAmountOfExternalAllocatedMemory(-(length_ - BUFSIZ));
     buffer_ = buffer;
     length_ = BUFSIZ;
   }
-  return handle_scope.Close(v8::Boolean::New(true));
+  return v8::True();
 }
 
 } // namespace io

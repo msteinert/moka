@@ -53,7 +53,6 @@ SoModule::~SoModule() {
 }
 
 v8::Handle<v8::Value> SoModule::Load() {
-  v8::HandleScope handle_scope;
   if (loaded_) {
     // Already loaded
     return GetExports();
@@ -62,15 +61,13 @@ v8::Handle<v8::Value> SoModule::Load() {
     // Initialize the base module
     std::string message("Failed to initialize module ");
     message.append(GetId());
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(message.c_str())));
+    return v8::ThrowException(v8::String::New(message.c_str()));
   }
   // Verify the shared object handle is valid
   if (!handle_) {
     std::string message("Shared object handle is NULL for module ");
     message.append(GetId());
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(message.c_str())));
+    return v8::ThrowException(v8::String::New(message.c_str()));
   }
   // Resolve the symbol for the initialization structure
   const struct module* init =
@@ -80,30 +77,26 @@ v8::Handle<v8::Value> SoModule::Load() {
     message.append(GetId());
     message.append(": ");
     message.append(dlerror());
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(message.c_str())));
+    return v8::ThrowException(v8::String::New(message.c_str()));
   }
   // Check the major version number, must be equal
   if (init->version_major != MOKA_MODULE_VERSION_MAJOR) {
     std::string message("Major version must match for module ");
     message.append(GetId());
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(message.c_str())));
+    return v8::ThrowException(v8::String::New(message.c_str()));
   }
   // Check the minor version number, must be equal or greater
   if (init->version_minor < MOKA_MODULE_VERSION_MINOR) {
     std::string message("Minor version not supported for module ");
     message.append(GetId());
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(message.c_str())));
+    return v8::ThrowException(v8::String::New(message.c_str()));
   }
   // Enter the context for this module
   v8::Context::Scope scope(GetContext());
   if (!init->initialize) {
     std::string message("Initialize function is NULL for module ");
     message.append(GetId());
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(message.c_str())));
+    return v8::ThrowException(v8::String::New(message.c_str()));
   }
   // Call the module initialization function passing a reference to this module
   v8::Handle<v8::Value> exports = init->initialize(argc_, argv_);
@@ -111,13 +104,12 @@ v8::Handle<v8::Value> SoModule::Load() {
     std::string message("Module ");
     message.append(GetId());
     message.append(" returned an empty value");
-    return handle_scope.Close(v8::ThrowException(
-          v8::String::New(message.c_str())));
+    return v8::ThrowException(v8::String::New(message.c_str()));
   } else if (exports->IsUndefined()) {
-    return handle_scope.Close(exports);
+    return exports;
   }
   loaded_ = true;
-  return handle_scope.Close(exports);
+  return exports;
 }
 
 } // namespace internal
