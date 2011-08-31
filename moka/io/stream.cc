@@ -66,13 +66,13 @@ v8::Handle<v8::FunctionTemplate> Stream::GetTemplate() {
   v8::PropertyAttribute attributes =
     static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("closed"),
-      v8::Boolean::New(true), attributes);
+      v8::True(), attributes);
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("readable"),
-      v8::Boolean::New(false), attributes);
+      v8::False(), attributes);
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("writable"),
-      v8::Boolean::New(false), attributes);
+      v8::False(), attributes);
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("seekable"),
-      v8::Boolean::New(false), attributes);
+      v8::False(), attributes);
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -88,24 +88,17 @@ v8::Handle<v8::Value> Stream::New(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Stream::Close(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::PropertyAttribute attributes =
-    static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
-  arguments.This()->Set(v8::String::NewSymbol("closed"),
-      v8::Boolean::New(true), attributes);
+  SetClosed(arguments.This(), true);
   return handle_scope.Close(v8::Undefined());
 }
 
 v8::Handle<v8::Value> Stream::Read(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Boolean> closed =
-    arguments.This()->Get(v8::String::NewSymbol("closed"))->ToBoolean();
-  if (closed->Value()) {
+  if (GetClosed(arguments.This())) {
     return handle_scope.Close(v8::ThrowException(
           Error::New("read: Stream is closed")));
   }  else {
-    v8::Handle<v8::Boolean> readable =
-      arguments.This()->Get(v8::String::NewSymbol("readable"))->ToBoolean();
-    if (readable->Value()) {
+    if (GetReadable(arguments.This())) {
       return handle_scope.Close(v8::ThrowException(
             Error::New("read: Unsupported")));
     } else {
@@ -117,15 +110,11 @@ v8::Handle<v8::Value> Stream::Read(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Stream::Write(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Boolean> closed =
-    arguments.This()->Get(v8::String::NewSymbol("closed"))->ToBoolean();
-  if (closed->Value()) {
+  if (GetClosed(arguments.This())) {
     return handle_scope.Close(v8::ThrowException(
           Error::New("write: Stream is closed")));
   }  else {
-    v8::Handle<v8::Boolean> writable =
-      arguments.This()->Get(v8::String::NewSymbol("writable"))->ToBoolean();
-    if (writable->Value()) {
+    if (GetWritable(arguments.This())) {
       return handle_scope.Close(v8::ThrowException(
             Error::New("write: Unsupported")));
     } else {
@@ -137,9 +126,7 @@ v8::Handle<v8::Value> Stream::Write(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Stream::Flush(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Boolean> closed =
-    arguments.This()->Get(v8::String::NewSymbol("closed"))->ToBoolean();
-  if (closed->Value()) {
+  if (GetClosed(arguments.This())) {
     return handle_scope.Close(v8::ThrowException(
           Error::New("flush: Stream is closed")));
   }  else {
@@ -150,9 +137,7 @@ v8::Handle<v8::Value> Stream::Flush(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Stream::Fileno(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Boolean> closed =
-    arguments.This()->Get(v8::String::NewSymbol("closed"))->ToBoolean();
-  if (closed->Value()) {
+  if (GetClosed(arguments.This())) {
     return handle_scope.Close(v8::ThrowException(
           Error::New("fileno: Stream is closed")));
   }  else {
@@ -163,9 +148,7 @@ v8::Handle<v8::Value> Stream::Fileno(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Stream::Isatty(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Boolean> closed =
-    arguments.This()->Get(v8::String::NewSymbol("closed"))->ToBoolean();
-  if (closed->Value()) {
+  if (GetClosed(arguments.This())) {
     return handle_scope.Close(v8::ThrowException(
           Error::New("isatty: Stream is closed")));
   }  else {
@@ -176,15 +159,11 @@ v8::Handle<v8::Value> Stream::Isatty(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Stream::Tell(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Boolean> closed =
-    arguments.This()->Get(v8::String::NewSymbol("closed"))->ToBoolean();
-  if (closed->Value()) {
+  if (GetClosed(arguments.This())) {
     return handle_scope.Close(v8::ThrowException(
           Error::New("tell: Stream is closed")));
   }  else {
-    v8::Handle<v8::Boolean> seekable =
-      arguments.This()->Get(v8::String::NewSymbol("seekable"))->ToBoolean();
-    if (seekable->Value()) {
+    if (GetSeekable(arguments.This())) {
       return handle_scope.Close(v8::ThrowException(
             Error::New("tell: Unsupported")));
     } else {
@@ -196,15 +175,11 @@ v8::Handle<v8::Value> Stream::Tell(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> Stream::Seek(const v8::Arguments& arguments) {
   v8::HandleScope handle_scope;
-  v8::Handle<v8::Boolean> closed =
-    arguments.This()->Get(v8::String::NewSymbol("closed"))->ToBoolean();
-  if (closed->Value()) {
+  if (GetClosed(arguments.This())) {
     return handle_scope.Close(v8::ThrowException(
           Error::New("seek: Stream is closed")));
   }  else {
-    v8::Handle<v8::Boolean> seekable =
-      arguments.This()->Get(v8::String::NewSymbol("seekable"))->ToBoolean();
-    if (seekable->Value()) {
+    if (GetSeekable(arguments.This())) {
       return handle_scope.Close(v8::ThrowException(
             Error::New("seek: Unsupported")));
     } else {

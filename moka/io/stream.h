@@ -42,6 +42,38 @@ class Stream;
 
 class moka::io::Stream {
 public:
+  static bool GetClosed(v8::Handle<v8::Value> stream) {
+    return Get(stream, "closed");
+  }
+
+  static void SetClosed(v8::Handle<v8::Value> stream, bool readable) {
+    Set(stream, "closed", readable);
+  }
+
+  static bool GetReadable(v8::Handle<v8::Value> stream) {
+    return Get(stream, "readable");
+  }
+
+  static void SetReadable(v8::Handle<v8::Value> stream, bool readable) {
+    Set(stream, "readable", readable);
+  }
+
+  static bool GetWritable(v8::Handle<v8::Value> stream) {
+    return Get(stream, "writable");
+  }
+
+  static void SetWritable(v8::Handle<v8::Value> stream, bool writable) {
+    Set(stream, "writable", writable);
+  }
+
+  static bool GetSeekable(v8::Handle<v8::Value> stream) {
+    return Get(stream, "seekable");
+  }
+
+  static void SetSeekable(v8::Handle<v8::Value> stream, bool seekable) {
+    Set(stream, "seekable", seekable);
+  }
+
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
 protected: // V8 interface methods
@@ -72,6 +104,18 @@ private: // Private methods
   Stream(Stream const& that);
 
   void operator=(Stream const& that);
+
+  static bool Get(v8::Handle<v8::Value> stream, const char* property) {
+    return stream->ToObject()->Get(
+        v8::String::NewSymbol(property))->ToBoolean()->Value();
+  }
+
+  static void Set(v8::Handle<v8::Value> stream, const char* property,
+      bool value) {
+    stream->ToObject()->Set(v8::String::NewSymbol(property),
+        value ? v8::True() : v8::False(),
+        static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
+  }
 };
 
 #endif // MOKA_IO_STREAM_H
