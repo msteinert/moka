@@ -24,6 +24,12 @@ print(f.read(e));
 print(e);
 f.close();
 
+try {
+	var foo = new io.FileStream(100);
+} catch (error) {
+	print(error);
+}
+
 var stdout = new io.FileStream(1);
 stdout.write('Hello, World!\n');
 

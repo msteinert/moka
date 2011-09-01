@@ -37,6 +37,7 @@
 #include "moka/io/buffer.h"
 #include "moka/io/error.h"
 #include "moka/io/file-stream.h"
+#include <sstream>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -108,7 +109,10 @@ v8::Handle<v8::FunctionTemplate> FileStream::GetTemplate() {
 
 v8::Handle<v8::Value> FileStream::Close() {
   if (-1 == ::close(fileno_)) {
-    return v8::ThrowException(Module::ErrnoException::New(errno));
+    std::stringstream stream;
+    stream << fileno_;
+    return v8::ThrowException(
+        Module::ErrnoException::New(stream.str().c_str(), errno));
   }
   fileno_ = -1;
   return v8::True();
@@ -140,7 +144,10 @@ v8::Handle<v8::Value> FileStream::Read(char* buffer, size_t offset,
   while (count > SSIZE_MAX) {
     ssize_t status = ::read(fileno_, buffer + offset, SSIZE_MAX);
     if (-1 == status) {
-      return v8::ThrowException(Module::ErrnoException::New(errno));
+      std::stringstream stream;
+      stream << fileno_;
+      return v8::ThrowException(
+          Module::ErrnoException::New(stream.str().c_str(), errno));
     } else if (0 == status) {
       // End of file
       return v8::Uint32::New(bytes);
@@ -152,7 +159,10 @@ v8::Handle<v8::Value> FileStream::Read(char* buffer, size_t offset,
   while (bytes < count) {
     ssize_t status = ::read(fileno_, buffer + offset, count);
     if (-1 == status) {
-      return v8::ThrowException(Module::ErrnoException::New(errno));
+      std::stringstream stream;
+      stream << fileno_;
+      return v8::ThrowException(
+          Module::ErrnoException::New(stream.str().c_str(), errno));
     } else if (0 == status) {
       // End of file
       return v8::Uint32::New(bytes);
@@ -176,7 +186,10 @@ v8::Handle<v8::Value> FileStream::Read() {
     bytes = ::read(fileno_, buffer, size);
     if (-1 == bytes) {
       ::free(buffer);
-      return v8::ThrowException(Module::ErrnoException::New(errno));
+      std::stringstream stream;
+      stream << fileno_;
+      return v8::ThrowException(
+          Module::ErrnoException::New(stream.str().c_str(), errno));
     } else if (0 == bytes) {
       // End of file
       if (string.IsEmpty()) {
@@ -287,7 +300,10 @@ v8::Handle<v8::Value> FileStream::Isatty() {
 v8::Handle<v8::Value> FileStream::Tell() {
   off_t position = ::lseek(fileno_, 0, SEEK_CUR);
   if (-1 == position) {
-    return v8::ThrowException(Module::ErrnoException::New(errno));
+    std::stringstream stream;
+    stream << fileno_;
+    return v8::ThrowException(
+        Module::ErrnoException::New(stream.str().c_str(), errno));
   }
   return v8::Uint32::New(position);
 }
@@ -295,7 +311,10 @@ v8::Handle<v8::Value> FileStream::Tell() {
 v8::Handle<v8::Value> FileStream::Seek(off_t offset, int whence) {
   off_t position = ::lseek(fileno_, offset, whence);
   if (-1 == position) {
-    return v8::ThrowException(Module::ErrnoException::New(errno));
+    std::stringstream stream;
+    stream << fileno_;
+    return v8::ThrowException(
+        Module::ErrnoException::New(stream.str().c_str(), errno));
   }
   return v8::Uint32::New(position);
 }
@@ -303,7 +322,10 @@ v8::Handle<v8::Value> FileStream::Seek(off_t offset, int whence) {
 v8::Handle<v8::Value> FileStream::Truncate(off_t length) {
   int status = ::ftruncate(fileno_, length);
   if (-1 == status) {
-    return v8::ThrowException(Module::ErrnoException::New(errno));
+    std::stringstream stream;
+    stream << fileno_;
+    return v8::ThrowException(
+        Module::ErrnoException::New(stream.str().c_str(), errno));
   }
   return v8::Uint32::New(length);
 }
@@ -727,11 +749,13 @@ v8::Handle<v8::Value> FileStream::Construct(const char* file_name, int mode) {
   }
   readable_ = mode & O_RDWR || mode & O_RDONLY;
   writable_ = mode & O_RDWR || mode & O_WRONLY;
-  seekable_ = -1 == ::lseek(fileno_, 0, SEEK_CUR) ? false : true;
   if (mode & O_APPEND) {
     if (-1 == ::lseek(fileno_, 0, SEEK_END)) {
       return v8::ThrowException(Module::ErrnoException::New(file_name, errno));
     }
+    seekable_ = true;
+  } else {
+    seekable_ = -1 == ::lseek(fileno_, 0, SEEK_CUR) ? false : true;
   }
   return v8::True();
 }
@@ -740,7 +764,10 @@ v8::Handle<v8::Value> FileStream::Construct(int fd) {
   fileno_ = fd;
   int mode = ::fcntl(fileno_, F_GETFL);
   if (-1 == mode) {
-    return v8::ThrowException(Module::ErrnoException::New(errno));
+    std::stringstream stream;
+    stream << fd;
+    return v8::ThrowException(
+        Module::ErrnoException::New(stream.str().c_str(), errno));
   }
   readable_ = mode & O_RDWR || mode & O_RDONLY;
   writable_ = mode & O_RDWR || mode & O_WRONLY;
