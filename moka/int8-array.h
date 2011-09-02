@@ -25,49 +25,58 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef MOKA_INT8_ARRAY_H
+#define MOKA_INT8_ARRAY_H
 
-#include "moka/io/error.h"
-#include "moka/io/stream.h"
-#include "moka/module.h"
+#include "moka/array-buffer-view.h"
+#include <v8.h>
 
 namespace moka {
 
-namespace io {
-
-// Initialize module
-static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
-  v8::HandleScope handle_scope;
-  v8::Handle<v8::Value> value = Module::Exports();
-  if (value.IsEmpty() || value->IsUndefined()) {
-    return handle_scope.Close(value);
-  }
-  v8::PropertyAttribute attributes =
-    static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
-  // IO Objects
-  v8::Handle<v8::Object> exports = value->ToObject();
-  exports->Set(v8::String::NewSymbol("Error"),
-      Error::GetTemplate()->GetFunction());
-  exports->Set(v8::String::NewSymbol("Stream"),
-      Stream::GetTemplate()->GetFunction());
-  // IO Constants
-  exports->Set(v8::String::NewSymbol("SEEK_SET"),
-      v8::Int32::New(SEEK_SET), attributes);
-  exports->Set(v8::String::NewSymbol("SEEK_CUR"),
-      v8::Int32::New(SEEK_CUR), attributes);
-  exports->Set(v8::String::NewSymbol("SEEK_END"),
-      v8::Int32::New(SEEK_END), attributes);
-  exports->Set(v8::String::NewSymbol("BUFSIZ"),
-      v8::Int32::New(BUFSIZ), attributes);
-  return handle_scope.Close(value);
-}
-
-} // namespace io
+class ArrayBuffer;
+class Int8Array;
 
 } // namespace moka
 
-MOKA_MODULE(moka::io::Initialize)
+class moka::Int8Array: public moka::ArrayBufferView {
+public:
+  static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+private: // V8 interface
+  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+
+  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
+
+protected: // Protected methods
+  Int8Array();
+
+  virtual ~Int8Array();
+
+private: // Private methods
+  Int8Array(Int8Array const& that);
+
+  void operator=(Int8Array const& that);
+
+  virtual uint32_t BytesPerElement() const {
+    return 1;
+  }
+
+  virtual void Set(uint32_t index, v8::Handle<v8::Value> value) {
+    array_[index] = static_cast<int8_t>(value->ToInt32()->Value());
+  }
+
+  virtual v8::Handle<v8::Value> Get(uint32_t index) const {
+    return v8::Int32::New(array_[index]);
+  }
+
+  virtual void Set(ArrayBufferView* that, uint32_t offset);
+
+  virtual v8::Handle<v8::Value> SubArray(int32_t begin, int32_t end) const;
+
+protected: // Protected data
+  int8_t* array_;
+};
+
+#endif // MOKA_INT8_ARRAY_H
 
 // vim: tabstop=2:sw=2:expandtab

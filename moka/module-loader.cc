@@ -131,7 +131,11 @@ bool ModuleLoader::Initialize(const char* file_name, int* argc, char*** argv) {
       }
     }
     // Add the current working directory
-    paths->Set(index++, v8::String::New("."));
+    char* cwd = ::getcwd(NULL, 0);
+    if (cwd) {
+      paths->Set(index++, v8::String::New(cwd));
+      ::free(cwd);
+    }
     // Add $HOME/lib/moka
     env = ::getenv("HOME");
     if (env) {

@@ -45,61 +45,25 @@ class moka::io::Stream {
 public:
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
+  static v8::Handle<v8::Value> Write(v8::Handle<v8::Object> stream,
+      v8::Handle<v8::Value> value);
+
+  static v8::Handle<v8::Value> Fileno(v8::Handle<v8::Object> stream);
+
+  static bool Closed(v8::Handle<v8::Object> stream);
+
+  static bool Readable(v8::Handle<v8::Object> stream);
+
+  static bool Writable(v8::Handle<v8::Object> stream);
+
+  static bool Seekable(v8::Handle<v8::Object> stream);
+
+private: // Class implementation
   virtual v8::Handle<v8::Value> Close();
 
-  /**
-   * \brief Read bytes into an array-like object
-   *
-   * \param buffer [in/out] The array-like object to read into
-   *
-   * \return The number of bytes read.
-   */
-  v8::Handle<v8::Value> Read(v8::Handle<v8::Object> buffer);
+  virtual v8::Handle<v8::Value> Read(size_t count);
 
-  /**
-   * \brief Read bytes into an array-like object
-   *
-   * \param buffer [in/out] The array-like object to read into
-   * \param count [in] The number of bytes to read
-   *
-   * \return The number of bytes read.
-   */
-  v8::Handle<v8::Value> Read(v8::Handle<v8::Object> buffer, size_t count);
-
-  /**
-   * \brief Read bytes into an array-like object starting from an offset
-   *
-   * \param buffer [in/out] The array-like object to read into
-   * \param offset [in] The offset in buffer to start writing to
-   * \param count [in] The number of bytes to read
-   *
-   * \return The number of bytes read.
-   */
-  virtual v8::Handle<v8::Value> Read(v8::Handle<v8::Object> buffer,
-      size_t offset, size_t count);
-
-  /**
-   * \brief Write bytes from a buffer
-   *
-   * \param buffer [in] The buffer to write from
-   *
-   * \return The number of bytes written.
-   */
-  v8::Handle<v8::Value> Write(Buffer* buffer);
-
-  v8::Handle<v8::Value> Write(v8::String::Utf8Value& string);
-
-  v8::Handle<v8::Value> Write(Buffer* buffer, size_t count);
-
-  v8::Handle<v8::Value> Write(v8::String::Utf8Value& string, size_t count);
-
-  v8::Handle<v8::Value> Write(Buffer* buffer, size_t offset, size_t count);
-
-  v8::Handle<v8::Value> Write(v8::String::Utf8Value& string, size_t offset,
-      size_t count);
-
-  virtual v8::Handle<v8::Value> Write(const char* buffer, size_t offset,
-      size_t count);
+  virtual v8::Handle<v8::Value> Write(v8::String::Utf8Value&);
 
   virtual v8::Handle<v8::Value> Flush();
 
@@ -107,19 +71,10 @@ public:
 
   virtual v8::Handle<v8::Value> Isatty();
 
-  /**
-   * \return The absolute position.
-   */
   virtual v8::Handle<v8::Value> Tell();
 
-  /**
-   * \return The new absolute position.
-   */
   virtual v8::Handle<v8::Value> Seek(off_t offset, int whence);
 
-  /**
-   * \return The new file size.
-   */
   virtual v8::Handle<v8::Value> Truncate(off_t length);
 
   virtual bool Closed() {
@@ -138,17 +93,7 @@ public:
     return false;
   }
 
-public: // Convenience methods
-  static v8::Handle<v8::Value> Write(v8::Handle<v8::Object> stream,
-      v8::Handle<v8::Object> buffer, size_t offset, size_t count);
-
-  static v8::Handle<v8::Value> Fileno(v8::Handle<v8::Object> stream);
-
-  static bool Readable(v8::Handle<v8::Object> stream);
-
-  static bool Writable(v8::Handle<v8::Object> stream);
-
-protected: // V8 interface methods
+private: // V8 interface
   static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
 
   static v8::Handle<v8::Value> Close(const v8::Arguments& arguments);

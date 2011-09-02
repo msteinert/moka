@@ -4,6 +4,12 @@
 # Moka library
 lib_LTLIBRARIES = libmoka.la
 libmoka_la_SOURCES = \
+	array-buffer.cc \
+	array-buffer.h \
+	array-buffer-view.cc \
+	array-buffer-view.h \
+	int8-array.cc \
+	int8-array.h \
 	module.cc \
 	module-factory.cc \
 	module-factory.h \
@@ -41,29 +47,13 @@ $(bin_PROGRAMS): libmoka.la
 # Modules
 moduledir = $(libdir)/moka
 module_LTLIBRARIES = \
-	io.la \
-	limits.la \
-	locale.la
+	io.la
 io_la_SOURCES = \
-	io/buffer.cc \
-	io/buffer.h \
-	io/buffered-stream.cc \
-	io/buffered-stream.h \
 	io/error.cc \
 	io/error.h \
-	io/file-stream.cc \
-	io/file-stream.h \
-	io/iconv.cc \
-	io/iconv.h \
 	io/module.cc \
 	io/stream.cc \
 	io/stream.h
-limits_la_SOURCES = \
-	limits/module.cc
-locale_la_SOURCES = \
-	locale/locale.cc \
-	locale/locale.h \
-	locale/module.cc
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir)

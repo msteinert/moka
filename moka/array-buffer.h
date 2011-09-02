@@ -25,49 +25,56 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef MOKA_ARRAY_BUFFER_H
+#define MOKA_ARRAY_BUFFER_H
 
-#include "moka/io/error.h"
-#include "moka/io/stream.h"
-#include "moka/module.h"
+#include <v8.h>
 
 namespace moka {
 
-namespace io {
-
-// Initialize module
-static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
-  v8::HandleScope handle_scope;
-  v8::Handle<v8::Value> value = Module::Exports();
-  if (value.IsEmpty() || value->IsUndefined()) {
-    return handle_scope.Close(value);
-  }
-  v8::PropertyAttribute attributes =
-    static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete);
-  // IO Objects
-  v8::Handle<v8::Object> exports = value->ToObject();
-  exports->Set(v8::String::NewSymbol("Error"),
-      Error::GetTemplate()->GetFunction());
-  exports->Set(v8::String::NewSymbol("Stream"),
-      Stream::GetTemplate()->GetFunction());
-  // IO Constants
-  exports->Set(v8::String::NewSymbol("SEEK_SET"),
-      v8::Int32::New(SEEK_SET), attributes);
-  exports->Set(v8::String::NewSymbol("SEEK_CUR"),
-      v8::Int32::New(SEEK_CUR), attributes);
-  exports->Set(v8::String::NewSymbol("SEEK_END"),
-      v8::Int32::New(SEEK_END), attributes);
-  exports->Set(v8::String::NewSymbol("BUFSIZ"),
-      v8::Int32::New(BUFSIZ), attributes);
-  return handle_scope.Close(value);
-}
-
-} // namespace io
+class ArrayBuffer;
 
 } // namespace moka
 
-MOKA_MODULE(moka::io::Initialize)
+class moka::ArrayBuffer {
+public:
+  static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+  static v8::Handle<v8::Value> New(uint32_t length);
+
+  void* GetBuffer() const {
+    return buffer_;
+  }
+
+  uint32_t GetByteLength() const {
+    return byte_length_;
+  }
+
+private: // V8 interface
+  static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
+
+  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
+
+  static v8::Handle<v8::Value> Slice(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> ByteLength(v8::Local<v8::String> property,
+      const v8::AccessorInfo &info);
+
+protected: // Protected methods
+  ArrayBuffer();
+
+  ~ArrayBuffer();
+
+private: // Private methods
+  ArrayBuffer(ArrayBuffer const& that);
+
+  void operator=(ArrayBuffer const& that);
+
+protected: // Protected data
+  void* buffer_;
+  uint32_t byte_length_;
+};
+
+#endif // MOKA_ARRAY_BUFFER_H
 
 // vim: tabstop=2:sw=2:expandtab

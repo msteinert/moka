@@ -36,6 +36,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <libgen.h>
+#include "moka/array-buffer.h"
+#include "moka/int8-array.h"
 #include "moka/module.h"
 
 namespace moka {
@@ -86,6 +88,12 @@ bool Module::Initialize() {
     context_->Global()->Set(v8::String::New("print"),
         print_templ->GetFunction());
   }
+  // Add the ArrayBuffer objects
+  context_->Global()->Set(v8::String::NewSymbol("ArrayBuffer"),
+      ArrayBuffer::GetTemplate()->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("Int8Array"),
+      Int8Array::GetTemplate()->GetFunction());
+  // Add the require object
   context_->Global()->Set(v8::String::NewSymbol("require"), require_);
   // Initialize exports
   v8::Local<v8::Object> exports = v8::Object::New();

@@ -1,10 +1,9 @@
 var io = require('io');
-var f = io.FileStream('bar.txt', 'r+');
-var a = new io.Buffer(256);
-f.read(a);
-print(a);
-f.seek(0);
-var b = new Array(4);
-f.read(b);
-print(b);
-f.close();
+
+var a = new ArrayBuffer(10);
+print(a.byteLength);
+
+var b = a.slice(9, 10);
+print(b.byteLength);
+
+//var c = new Int8Array(10);
