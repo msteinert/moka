@@ -66,6 +66,9 @@ public:
     return buffer_;
   }
 
+public: // Convenience functions
+  static size_t Length(v8::Handle<v8::Object> buffer);
+
 protected: // V8 interface methods
   static v8::Handle<v8::Value> New(const v8::Arguments& arguments);
 

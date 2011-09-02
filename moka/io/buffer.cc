@@ -77,6 +77,18 @@ v8::Handle<v8::Value> Buffer::Resize(size_t length) {
   return v8::True();
 }
 
+size_t Buffer::Length(v8::Handle<v8::Object> buffer) {
+  v8::TryCatch try_catch;
+  v8::Handle<v8::Value> length = buffer->Get(v8::String::NewSymbol("length"));
+  if (length.IsEmpty()) {
+    return 0;
+  }
+  if (!length->IsUint32()) {
+    return 0;
+  }
+  return length->ToUint32()->Value();
+}
+
 v8::Handle<v8::Value> Buffer::New(size_t length) {
   v8::Handle<v8::Value> argv[1] = { v8::Integer::New(length) };
   return GetTemplate()->GetFunction()->NewInstance(1, argv);

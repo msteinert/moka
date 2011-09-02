@@ -30,6 +30,7 @@
 #endif
 
 #include "moka/io/buffer.h"
+#include "moka/io/buffered-stream.h"
 #include "moka/io/error.h"
 #include "moka/io/file-stream.h"
 #include "moka/io/iconv.h"
@@ -61,6 +62,8 @@ static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
       Stream::GetTemplate()->GetFunction());
   exports->Set(v8::String::NewSymbol("FileStream"),
       FileStream::GetTemplate()->GetFunction());
+  exports->Set(v8::String::NewSymbol("BufferedStream"),
+      BufferedStream::GetTemplate()->GetFunction());
   // IO Constants
   exports->Set(v8::String::NewSymbol("SEEK_SET"),
       v8::Int32::New(SEEK_SET), attributes);
@@ -68,6 +71,8 @@ static v8::Handle<v8::Value> Initialize(int* argc, char*** argv) {
       v8::Int32::New(SEEK_CUR), attributes);
   exports->Set(v8::String::NewSymbol("SEEK_END"),
       v8::Int32::New(SEEK_END), attributes);
+  exports->Set(v8::String::NewSymbol("BUFSIZ"),
+      v8::Int32::New(BUFSIZ), attributes);
   return handle_scope.Close(value);
 }
 

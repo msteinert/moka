@@ -188,6 +188,8 @@ public: // Module helper functions
       v8::Handle<v8::FunctionTemplate> function_templ,
       const v8::Arguments& arguments);
 
+  static v8::Handle<v8::Value> CallMethod(v8::Handle<v8::Object> object,
+      const char* method, int argc, v8::Handle<v8::Value> argv[]);
 
 public: // Sub-classes
   class MOKA_EXPORT Exception {

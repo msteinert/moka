@@ -34,20 +34,17 @@
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
-#include "moka/io/buffer.h"
-#include "moka/io/error.h"
 #include "moka/io/file-stream.h"
 #include <sstream>
-#include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 namespace moka {
 
 namespace io {
 
 FileStream::FileStream()
-  : fileno_(-1) {}
+  : fileno_(-1)
+  , buffer_(NULL)
+  , length_(0) {}
 
 FileStream::~FileStream() {
   if (-1 < fileno_) {
@@ -77,32 +74,6 @@ v8::Handle<v8::FunctionTemplate> FileStream::GetTemplate() {
   templ->InstanceTemplate()->SetInternalFieldCount(1);
   templ->Inherit(Stream::GetTemplate());
   templ->SetClassName(v8::String::NewSymbol("FileStream"));
-  // FileStream functions
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("close"),
-      v8::FunctionTemplate::New(Close)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("read"),
-      v8::FunctionTemplate::New(Read)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("write"),
-      v8::FunctionTemplate::New(Write)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("fileno"),
-      v8::FunctionTemplate::New(Fileno)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("isatty"),
-      v8::FunctionTemplate::New(Isatty)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("tell"),
-      v8::FunctionTemplate::New(Tell)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("seek"),
-      v8::FunctionTemplate::New(Seek)->GetFunction());
-  templ->PrototypeTemplate()->Set(v8::String::NewSymbol("truncate"),
-      v8::FunctionTemplate::New(Truncate)->GetFunction());
-  // FileStream properties
-  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("closed"),
-      ClosedGet);
-  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("readable"),
-      ReadableGet);
-  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("writable"),
-      WritableGet);
-  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("seekable"),
-      SeekableGet);
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -118,149 +89,49 @@ v8::Handle<v8::Value> FileStream::Close() {
   return v8::True();
 }
 
-v8::Handle<v8::Value> FileStream::Read(Buffer* buffer) {
-  return Read(buffer, 0, buffer->GetLength());
-}
-
-v8::Handle<v8::Value> FileStream::Read(Buffer* buffer, size_t count) {
-  return Read(buffer, 0, count);
-}
-
-v8::Handle<v8::Value> FileStream::Read(Buffer* buffer, size_t offset,
-    size_t count) {
-  if (!count) {
-    return v8::Uint32::New(0);
-  }
-  if (count > buffer->GetLength() - offset) {
-    return ThrowException(v8::Exception::RangeError(
-          v8::String::New("Buffer is not large enough")));
-  }
-  return Read(buffer->GetBuffer(), offset, count);
-}
-
-v8::Handle<v8::Value> FileStream::Read(char* buffer, size_t offset,
-    size_t count) {
-  size_t bytes = 0;
-  while (count > SSIZE_MAX) {
-    ssize_t status = ::read(fileno_, buffer + offset, SSIZE_MAX);
-    if (-1 == status) {
-      std::stringstream stream;
-      stream << fileno_;
-      return v8::ThrowException(
-          Module::ErrnoException::New(stream.str().c_str(), errno));
-    } else if (0 == status) {
-      // End of file
-      return v8::Uint32::New(bytes);
-    }
-    offset += status;
-    bytes += status;
-    count -= status;
-  }
-  while (bytes < count) {
-    ssize_t status = ::read(fileno_, buffer + offset, count);
-    if (-1 == status) {
-      std::stringstream stream;
-      stream << fileno_;
-      return v8::ThrowException(
-          Module::ErrnoException::New(stream.str().c_str(), errno));
-    } else if (0 == status) {
-      // End of file
-      return v8::Uint32::New(bytes);
-    }
-    offset += status;
-    bytes += status;
-    count -= status;
-  }
-  return v8::Uint32::New(bytes);
-}
-
-v8::Handle<v8::Value> FileStream::Read() {
-  size_t size = BUFSIZ > SSIZE_MAX ? SSIZE_MAX : BUFSIZ;
-  char* buffer = static_cast<char*>(::malloc(size));
-  if (!buffer) {
-    return v8::ThrowException(Module::ErrnoException::New(errno));
-  }
-  ssize_t bytes;
-  v8::Local<v8::String> string;
-  while (true) {
-    bytes = ::read(fileno_, buffer, size);
-    if (-1 == bytes) {
-      ::free(buffer);
-      std::stringstream stream;
-      stream << fileno_;
-      return v8::ThrowException(
-          Module::ErrnoException::New(stream.str().c_str(), errno));
-    } else if (0 == bytes) {
-      // End of file
-      if (string.IsEmpty()) {
-        ::free(buffer);
-        return v8::String::New(buffer, bytes);
-      } else {
-        ::free(buffer);
-        return v8::String::Concat(string, v8::String::New(buffer, bytes));
-      }
-    }
-    if (string.IsEmpty()) {
-      string = v8::String::New(buffer, bytes);
-    } else {
-      string = v8::String::Concat(string, v8::String::New(buffer, bytes));
-    }
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Read(size_t count) {
-  char* buffer = static_cast<char*>(::malloc(count));
-  if (!buffer) {
-    return v8::ThrowException(Module::ErrnoException::New(errno));
-  }
-  v8::Handle<v8::Value> value = Read(buffer, 0, count);
+v8::Handle<v8::Value> FileStream::Read(v8::Handle<v8::Object> buffer,
+    size_t offset, size_t count) {
+  v8::Handle<v8::Value> value = EnsureBuffer(count);
   if (value->IsUndefined()) {
-    ::free(buffer);
     return value;
   }
-  v8::Local<v8::String> string =
-    v8::String::New(buffer, value->ToUint32()->Value());
-  ::free(buffer);
-  return string;
-}
-
-v8::Handle<v8::Value> FileStream::Write(Buffer* buffer) {
-  return Write(buffer, 0, buffer->GetLength());
-}
-
-v8::Handle<v8::Value> FileStream::Write(v8::String::Utf8Value& string) {
-  return Write(string, 0, string.length());
-}
-
-v8::Handle<v8::Value> FileStream::Write(Buffer* buffer, size_t count) {
-  return Write(buffer, 0, count);
-}
-
-v8::Handle<v8::Value> FileStream::Write(v8::String::Utf8Value& string,
-    size_t count) {
-  return Write(string, 0, count);
-}
-
-v8::Handle<v8::Value> FileStream::Write(Buffer* buffer, size_t offset,
-    size_t count) {
-  if (!buffer->GetLength()) {
-    return v8::Uint32::New(0);
+  size_t bytes = 0;
+  while (count > SSIZE_MAX) {
+    ssize_t status = ::read(fileno_, buffer_ + bytes, SSIZE_MAX);
+    if (-1 == status) {
+      std::stringstream stream;
+      stream << fileno_;
+      return v8::ThrowException(
+          Module::ErrnoException::New(stream.str().c_str(), errno));
+    }
+    bytes += status;
+    count -= status;
+    if (0 == status) {
+      break;
+    }
   }
-  if (count > buffer->GetLength() - offset) {
-    count = buffer->GetLength() - offset;
+  while (bytes < count) {
+    ssize_t status = ::read(fileno_, buffer_ + bytes, count);
+    if (-1 == status) {
+      std::stringstream stream;
+      stream << fileno_;
+      return v8::ThrowException(
+          Module::ErrnoException::New(stream.str().c_str(), errno));
+    }
+    bytes += status;
+    count -= status;
+    if (0 == status) {
+      break;
+    }
   }
-  return Write(buffer->GetBuffer(), offset, count);
-}
-
-v8::Handle<v8::Value> FileStream::Write(v8::String::Utf8Value& string,
-    size_t offset, size_t count) {
-  if (!string.length()) {
-    return v8::Uint32::New(0);
+  value = PruneBuffer();
+  if (value->IsUndefined()) {
+    return value;
   }
-  if (count > string.length() - offset) {
-    count = string.length() - offset;
+  for (size_t index = 0; index < bytes; ++index) {
+    buffer->Set(index + offset, v8::Uint32::New(buffer_[index]));
   }
-  return Write(*string, offset, count);
+  return v8::Uint32::New(bytes);
 }
 
 v8::Handle<v8::Value> FileStream::Write(const char* buffer, size_t offset,
@@ -456,292 +327,6 @@ void FileStream::Delete(v8::Persistent<v8::Value> object, void* parameters) {
   object.Clear();
 }
 
-v8::Handle<v8::Value> FileStream::Close(const v8::Arguments& arguments) {
-  switch (arguments.Length()) {
-  case 0:
-    {
-      FileStream* self = static_cast<FileStream*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      v8::Handle<v8::Value> value = self->Close();
-      if (value->IsUndefined()) {
-        return value;
-      }
-      return v8::True();
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Zero arguments allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Read(const v8::Arguments& arguments) {
-  FileStream* self = static_cast<FileStream*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  if (-1 == self->fileno_) {
-    return v8::ThrowException(Error::New("read: File is closed"));
-  }
-  if (!self->readable_) {
-    return v8::ThrowException(Error::New("read: File is not readable"));
-  }
-  switch (arguments.Length()) {
-  case 3:
-    if (arguments[2]->IsUint32()) {
-      if (arguments[1]->IsUint32()) {
-        if (arguments[0]->IsObject()) {
-          v8::Handle<v8::Object> object = arguments[0]->ToObject();
-          if (Buffer::GetTemplate()->HasInstance(object)) {
-            Buffer* buffer = static_cast<Buffer*>(
-                object->GetPointerFromInternalField(0));
-            return self->Read(buffer, arguments[1]->ToUint32()->Value(),
-                arguments[2]->ToUint32()->Value());
-          }
-        }
-        return v8::ThrowException(v8::Exception::TypeError(
-              v8::String::New("Argument one must be of type Buffer")));
-      }
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument two must be an unsigned integer")));
-    }
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Argument three must be an unsigned integer")));
-  case 2:
-    if (arguments[1]->IsUint32()) {
-      if (arguments[0]->IsObject()) {
-        v8::Handle<v8::Object> object = arguments[0]->ToObject();
-        if (Buffer::GetTemplate()->HasInstance(object)) {
-          Buffer* buffer = static_cast<Buffer*>(
-              object->GetPointerFromInternalField(0));
-          return self->Read(buffer, arguments[1]->ToUint32()->Value());
-        }
-      }
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be of type Buffer")));
-    }
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Argument two must be an unsigned integer")));
-  case 1:
-    if (arguments[0]->IsObject()) {
-      v8::Handle<v8::Object> object = arguments[0]->ToObject();
-      if (Buffer::GetTemplate()->HasInstance(object)) {
-        Buffer* buffer = static_cast<Buffer*>(
-            object->GetPointerFromInternalField(0));
-        return self->Read(buffer);
-      }
-    } else if (arguments[0]->IsUint32()) {
-      return self->Read(arguments[0]->ToUint32()->Value());
-    }
-    return v8::ThrowException(v8::Exception::TypeError(
-        v8::String::New("Argument one must be an unsigned integer or "
-          "of type Buffer")));
-  case 0:
-    return self->Read();
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One, two, or three argument(s) allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Write(const v8::Arguments& arguments) {
-  FileStream* self = static_cast<FileStream*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  if (-1 == self->fileno_) {
-    return v8::ThrowException(Error::New("write: File is closed"));
-  }
-  if (!self->writable_) {
-    return v8::ThrowException(Error::New("write: File is not writable"));
-  }
-  switch (arguments.Length()) {
-  case 3:
-    if (arguments[2]->IsUint32()) {
-      if (arguments[1]->IsUint32()) {
-        if (arguments[0]->IsObject()) {
-          v8::Handle<v8::Object> object = arguments[0]->ToObject();
-          if (Buffer::GetTemplate()->HasInstance(object)) {
-            Buffer* buffer = static_cast<Buffer*>(
-                object->GetPointerFromInternalField(0));
-            return self->Write(buffer, arguments[1]->ToUint32()->Value(),
-                arguments[2]->ToUint32()->Value());
-          }
-        } else {
-          v8::String::Utf8Value string(arguments[0]->ToString());
-          return self->Write(string, arguments[1]->ToUint32()->Value(),
-              arguments[2]->ToUint32()->Value());
-        }
-      }
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument two must be an unsigned integer")));
-    }
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Argument three must be an unsigned integer")));
-  case 2:
-    if (arguments[1]->IsUint32()) {
-      if (arguments[0]->IsObject()) {
-        v8::Handle<v8::Object> object = arguments[0]->ToObject();
-        if (Buffer::GetTemplate()->HasInstance(object)) {
-          Buffer* buffer = static_cast<Buffer*>(
-              object->GetPointerFromInternalField(0));
-          return self->Write(buffer, arguments[1]->ToUint32()->Value());
-        }
-      } else {
-        v8::String::Utf8Value string(arguments[0]->ToString());
-        return self->Write(string, arguments[1]->ToUint32()->Value());
-      }
-    }
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Argument two must be an unsigned integer")));
-  case 1:
-    if (arguments[0]->IsObject()) {
-      v8::Handle<v8::Object> object = arguments[0]->ToObject();
-      if (Buffer::GetTemplate()->HasInstance(object)) {
-        Buffer* buffer = static_cast<Buffer*>(
-            object->GetPointerFromInternalField(0));
-        return self->Write(buffer);
-      }
-    } else {
-      v8::String::Utf8Value string(arguments[0]->ToString());
-      return self->Write(string);
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One, two, or three argument(s) allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Fileno(const v8::Arguments& arguments) {
-  FileStream* self = static_cast<FileStream*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  if (-1 == self->fileno_) {
-    return v8::ThrowException(Error::New("fileno: File is closed"));
-  }
-  switch (arguments.Length()) {
-  case 0:
-    return self->Fileno();
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Zero arguments allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Isatty(const v8::Arguments& arguments) {
-  FileStream* self = static_cast<FileStream*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  if (-1 == self->fileno_) {
-    return v8::ThrowException(Error::New("isatty: File is closed"));
-  }
-  switch (arguments.Length()) {
-  case 0:
-    return self->Isatty();
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Zero arguments allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Tell(const v8::Arguments& arguments) {
-  FileStream* self = static_cast<FileStream*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  if (-1 == self->fileno_) {
-    return v8::ThrowException(Error::New("tell: File is closed"));
-  }
-  if (!self->seekable_) {
-    return v8::ThrowException(Error::New("tell: File is not seekable"));
-  }
-  switch (arguments.Length()) {
-  case 0:
-    return self->Tell();
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Zero arguments allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Seek(const v8::Arguments& arguments) {
-  FileStream* self = static_cast<FileStream*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  if (-1 == self->fileno_) {
-    return v8::ThrowException(Error::New("seek: File is closed"));
-  }
-  if (!self->seekable_) {
-    return v8::ThrowException(Error::New("seek: File is not seekable"));
-  }
-  int whence = SEEK_SET;
-  switch (arguments.Length()) {
-  case 2:
-    if (arguments[1]->IsInt32()) {
-      whence = arguments[1]->ToInt32()->Value();
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be one of "
-              "SEEK_SET/SEEK_CUR/SEEK_END")));
-    }
-    // Fall through
-  case 1:
-    if (arguments[0]->IsInt32()) {
-      return self->Seek(arguments[0]->ToInt32()->Value(), whence);
-    }
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Argument one must be an integer")));
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One or two argument(s) allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::Truncate(const v8::Arguments& arguments) {
-  FileStream* self = static_cast<FileStream*>(
-      arguments.This()->GetPointerFromInternalField(0));
-  if (-1 == self->fileno_) {
-    return v8::ThrowException(Error::New("truncate: File is closed"));
-  }
-  if (!self->seekable_) {
-    return v8::ThrowException(Error::New("truncate: File is not seekable"));
-  }
-  off_t length = 0;
-  switch (arguments.Length()) {
-  case 1:
-    if (arguments[1]->IsInt32()) {
-      length = arguments[1]->ToInt32()->Value();
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an integer")));
-    }
-    // Fall through
-  case 0:
-    return self->Truncate(length);
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Zero or one argument(s) allowed")));
-  }
-}
-
-v8::Handle<v8::Value> FileStream::ClosedGet(v8::Local<v8::String> property,
-    const v8::AccessorInfo &info) {
-  FileStream* self = static_cast<FileStream*>(
-      info.This()->GetPointerFromInternalField(0));
-  return -1 == self->fileno_ ? v8::True() : v8::False();
-}
-
-v8::Handle<v8::Value> FileStream::ReadableGet(v8::Local<v8::String> property,
-    const v8::AccessorInfo &info) {
-  FileStream* self = static_cast<FileStream*>(
-      info.This()->GetPointerFromInternalField(0));
-  return self->readable_ ? v8::True() : v8::False();
-}
-
-v8::Handle<v8::Value> FileStream::WritableGet(v8::Local<v8::String> property,
-    const v8::AccessorInfo &info) {
-  FileStream* self = static_cast<FileStream*>(
-      info.This()->GetPointerFromInternalField(0));
-  return self->writable_ ? v8::True() : v8::False();
-}
-
-v8::Handle<v8::Value> FileStream::SeekableGet(v8::Local<v8::String> property,
-    const v8::AccessorInfo &info) {
-  FileStream* self = static_cast<FileStream*>(
-      info.This()->GetPointerFromInternalField(0));
-  return self->seekable_ ? v8::True() : v8::False();
-}
-
 v8::Handle<v8::Value> FileStream::Construct(const char* file_name, int mode) {
   fileno_ = ::open(file_name, mode, 0666);
   if (fileno_ < 0) {
@@ -772,6 +357,37 @@ v8::Handle<v8::Value> FileStream::Construct(int fd) {
   readable_ = mode & O_RDWR || mode & O_RDONLY;
   writable_ = mode & O_RDWR || mode & O_WRONLY;
   seekable_ = -1 == ::lseek(fileno_, 0, SEEK_CUR) ? false : true;
+  return v8::True();
+}
+
+v8::Handle<v8::Value> FileStream::EnsureBuffer(size_t length) {
+  if (length_ < length) {
+    if (length < BUFSIZ) {
+      length = BUFSIZ;
+    }
+    char* buffer = static_cast<char*>(
+        ::realloc(static_cast<void*>(buffer_), length));
+    if (!buffer) {
+      return v8::ThrowException(Module::ErrnoException::New(errno));
+    }
+    v8::V8::AdjustAmountOfExternalAllocatedMemory(length - length_);
+    buffer_ = buffer;
+    length_ = length;
+  }
+  return v8::True();
+}
+
+v8::Handle<v8::Value> FileStream::PruneBuffer() {
+  if (BUFSIZ < length_) {
+    char* buffer = static_cast<char*>(
+        ::realloc(static_cast<void*>(buffer_), BUFSIZ));
+    if (!buffer) {
+      return v8::ThrowException(Module::ErrnoException::New(errno));
+    }
+    v8::V8::AdjustAmountOfExternalAllocatedMemory(-(length_ - BUFSIZ));
+    buffer_ = buffer;
+    length_ = BUFSIZ;
+  }
   return v8::True();
 }
 

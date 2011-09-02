@@ -202,6 +202,22 @@ v8::Handle<v8::Value> Module::ConstructCall(
   return instance;
 }
 
+v8::Handle<v8::Value> Module::CallMethod(v8::Handle<v8::Object> object,
+    const char* method, int argc, v8::Handle<v8::Value> argv[]) {
+  v8::TryCatch try_catch;
+  v8::Handle<v8::Value> function = object->Get(v8::String::NewSymbol(method));
+  if (function.IsEmpty()) {
+    return try_catch.ReThrow();
+  }
+  if (!function->IsFunction()) {
+    std::string message(method);
+    message.append(" is not a function");
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New(message.c_str())));
+  }
+  return v8::Function::Cast(*function)->Call(object, argc, argv);
+}
+
 v8::Handle<v8::Value> Module::Exception::New(v8::Handle<v8::Value> message) {
   v8::Handle<v8::Object> object;
   if (message.IsEmpty()) {

@@ -25,8 +25,8 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef MOKA_IO_FILE_STREAM_H
-#define MOKA_IO_FILE_STREAM_H
+#ifndef MOKA_IO_BUFFERED_STREAM_H
+#define MOKA_IO_BUFFERED_STREAM_H
 
 #include "moka/io/stream.h"
 
@@ -34,52 +34,72 @@ namespace moka {
 
 namespace io {
 
-class FileStream;
+class BufferedStream;
 
 } // namespace io
 
 } // namespace moka
 
-class moka::io::FileStream: public moka::io::Stream {
+class moka::io::BufferedStream: public moka::io::Stream {
 public:
-  static v8::Handle<v8::Value> New(const char* file_name, const char* mode);
+  static v8::Handle<v8::Value> New(v8::Handle<v8::Value> stream);
 
-  static v8::Handle<v8::Value> New(int fd);
+  static v8::Handle<v8::Value> New(v8::Handle<v8::Value> stream,
+      size_t buffer_size);
+
+  static v8::Handle<v8::Value> New(v8::Handle<v8::Value> stream,
+      v8::Handle<v8::Value> buffer);
 
   static v8::Handle<v8::FunctionTemplate> GetTemplate();
 
-  virtual v8::Handle<v8::Value> Close();
+  virtual v8::Handle<v8::Value> Close() {
+    return static_cast<Stream*>(
+        stream_->GetPointerFromInternalField(0))->Close();
+  }
 
   virtual v8::Handle<v8::Value> Read(v8::Handle<v8::Object> buffer,
       size_t offset, size_t count);
 
-  virtual v8::Handle<v8::Value> Write(const char* buffer, size_t offset,
-      size_t count);
+  virtual v8::Handle<v8::Value> Write(v8::Handle<v8::Object> buffer,
+      size_t offset, size_t count);
 
-  virtual v8::Handle<v8::Value> Fileno();
+  virtual v8::Handle<v8::Value> Flush();
 
-  virtual v8::Handle<v8::Value> Isatty();
+  virtual v8::Handle<v8::Value> Fileno() {
+    Stream* stream = static_cast<Stream*>(
+        stream_->GetPointerFromInternalField(0));
+    return stream->Fileno();
+  }
+
+  virtual v8::Handle<v8::Value> Isatty() {
+    Stream* stream = static_cast<Stream*>(
+        stream_->GetPointerFromInternalField(0));
+    return stream->Isatty();
+  }
 
   virtual v8::Handle<v8::Value> Tell();
 
   virtual v8::Handle<v8::Value> Seek(off_t offset, int whence);
 
-  virtual v8::Handle<v8::Value> Truncate(off_t length);
+  virtual v8::Handle<v8::Value> Truncate(off_t length = 0);
 
   virtual bool Closed() {
-    return -1 == fileno_ ? true : false;
+    return static_cast<Stream*>(
+        stream_->GetPointerFromInternalField(0))->Closed();
   }
 
   virtual bool Readable() {
-    return readable_;
+    return static_cast<Stream*>(
+        stream_->GetPointerFromInternalField(0))->Readable();
   }
 
   virtual bool Writable() {
-    return writable_;
+    return static_cast<Stream*>(
+        stream_->GetPointerFromInternalField(0))->Writable();
   }
 
   virtual bool Seekable() {
-    return seekable_;
+    return true;
   }
 
 protected: // V8 interface methods
@@ -88,32 +108,28 @@ protected: // V8 interface methods
   static void Delete(v8::Persistent<v8::Value> object, void* parameters);
 
 protected: // Protected methods
-  v8::Handle<v8::Value> Construct(const char* file_name, int mode);
+  v8::Handle<v8::Value> Construct(v8::Handle<v8::Object> stream);
 
-  v8::Handle<v8::Value> Construct(int fd);
+  v8::Handle<v8::Value> Construct(v8::Handle<v8::Object> stream,
+      size_t buffer_size);
 
-  FileStream();
+  BufferedStream();
 
-  virtual ~FileStream();
+  virtual ~BufferedStream();
 
 private: // Private methods
-  FileStream(FileStream const& that);
+  BufferedStream(BufferedStream const& that);
 
-  void operator=(FileStream const& that);
-
-  v8::Handle<v8::Value> EnsureBuffer(size_t length);
-
-  v8::Handle<v8::Value> PruneBuffer();
+  void operator=(BufferedStream const& that);
 
 private: // Private data
-  int fileno_;
-  bool readable_;
-  bool writable_;
-  bool seekable_;
-  char* buffer_;
-  size_t length_;
+  v8::Persistent<v8::Object> stream_;
+  v8::Persistent<v8::Object> read_;
+  size_t read_start_, read_end_;
+  v8::Persistent<v8::Object> write_;
+  size_t write_start_, write_end_;
 };
 
-#endif // MOKA_IO_FILE_STREAM_H
+#endif // MOKA_IO_BUFFERED_STREAM_H
 
 // vim: tabstop=2:sw=2:expandtab

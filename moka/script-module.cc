@@ -104,12 +104,12 @@ v8::Handle<v8::Value> ScriptModule::Load() {
   v8::Local<v8::Script> script = v8::Script::Compile(source,
       v8::String::New(GetFileName()));
   if (script.IsEmpty()) {
-    return v8::ThrowException(try_catch.ReThrow());
+    return try_catch.ReThrow();
   }
   // Run the script
   v8::Local<v8::Value> result = script->Run();
   if (result.IsEmpty()) {
-    return v8::ThrowException(try_catch.ReThrow());
+    return try_catch.ReThrow();
   }
   loaded_ = true;
   return GetExports();

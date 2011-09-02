@@ -47,6 +47,8 @@ module_LTLIBRARIES = \
 io_la_SOURCES = \
 	io/buffer.cc \
 	io/buffer.h \
+	io/buffered-stream.cc \
+	io/buffered-stream.h \
 	io/error.cc \
 	io/error.h \
 	io/file-stream.cc \
