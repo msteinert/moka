@@ -181,9 +181,8 @@ v8::Handle<v8::Value> ArrayBuffer::Slice(const v8::Arguments& arguments) {
 
 v8::Handle<v8::Value> ArrayBuffer::ByteLength(v8::Local<v8::String> property,
     const v8::AccessorInfo &info) {
-  ArrayBuffer* self = static_cast<ArrayBuffer*>(
-      info.This()->GetPointerFromInternalField(0));
-  return v8::Uint32::New(self->byte_length_);
+  return v8::Uint32::New(static_cast<ArrayBuffer*>(
+        info.This()->GetPointerFromInternalField(0))->byte_length_);
 }
 
 } // namespace moka

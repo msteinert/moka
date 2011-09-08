@@ -37,8 +37,8 @@
 #include <cstring>
 #include <libgen.h>
 #include "moka/array-buffer.h"
-#include "moka/int8-array.h"
 #include "moka/module.h"
+#include "moka/typed-array.h"
 
 namespace moka {
 
@@ -92,7 +92,29 @@ bool Module::Initialize() {
   context_->Global()->Set(v8::String::NewSymbol("ArrayBuffer"),
       ArrayBuffer::GetTemplate()->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Int8Array"),
-      Int8Array::GetTemplate()->GetFunction());
+      TypedArray<int8_t, v8::kExternalByteArray>::GetTemplate(
+        "Int8Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("Uint8Array"),
+      TypedArray<uint8_t, v8::kExternalUnsignedByteArray>::GetTemplate(
+        "Uint8Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("Int16Array"),
+      TypedArray<int16_t, v8::kExternalShortArray>::GetTemplate(
+        "Int16Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("Uint16Array"),
+      TypedArray<uint16_t, v8::kExternalUnsignedShortArray>::GetTemplate(
+        "Uint16Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("Int32Array"),
+      TypedArray<int32_t, v8::kExternalIntArray>::GetTemplate(
+        "Int32Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("Uint32Array"),
+      TypedArray<uint32_t, v8::kExternalUnsignedIntArray>::GetTemplate(
+        "Uint32Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("FloatArray"),
+      TypedArray<float, v8::kExternalFloatArray>::GetTemplate(
+        "FloatArray")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("DoubleArray"),
+      TypedArray<double, v8::kExternalDoubleArray>::GetTemplate(
+        "DoubleArray")->GetFunction());
   // Add the require object
   context_->Global()->Set(v8::String::NewSymbol("require"), require_);
   // Initialize exports

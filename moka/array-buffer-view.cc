@@ -29,16 +29,17 @@
 #include "config.h"
 #endif
 
+#include <cstring>
 #include "moka/array-buffer.h"
 #include "moka/array-buffer-view.h"
 #include "moka/module.h"
+#include <sstream>
 
 namespace moka {
 
 ArrayBufferView::ArrayBufferView()
   : byte_offset_(0)
   , byte_length_(0) {}
-
 
 ArrayBufferView::~ArrayBufferView() {
   if (!array_buffer_.IsEmpty()) {
@@ -120,7 +121,7 @@ v8::Handle<v8::Value> ArrayBufferView::Get(const v8::Arguments& arguments) {
           arguments.This()->GetPointerFromInternalField(0));
       uint32_t index = arguments[0]->ToUint32()->Value();
       if (index < self->Length()) {
-        return self->Get(index);
+        return arguments.This()->Get(index);
       }
       return v8::Undefined();
     } else {
@@ -139,18 +140,19 @@ v8::Handle<v8::Value> ArrayBufferView::Set(const v8::Arguments& arguments) {
   uint32_t offset = 0;
   switch (arguments.Length()) {
   case 2:
-    if (arguments[1]->IsUint32()) {
-      offset = arguments[1]->ToUint32()->Value();
-    } else {
-      if (arguments[0]->IsUint32()) {
-        uint32_t index = arguments[0]->ToUint32()->Value();
-        if (index < self->Length()) {
-          self->Set(index, arguments[1]);
-        }
-        return v8::Undefined();
+    if (arguments[0]->IsUint32()) {
+      uint32_t index = arguments[0]->ToUint32()->Value();
+      if (index < self->Length()) {
+        arguments.This()->Set(index, arguments[1]);
       }
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument two must be an unsigned long")));
+      return v8::Undefined();
+    } else {
+      if (arguments[1]->IsUint32()) {
+        offset = arguments[1]->ToUint32()->Value();
+      } else {
+        return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument two must be an unsigned long")));
+      }
     }
     // Fall through
   case 1:
@@ -158,21 +160,23 @@ v8::Handle<v8::Value> ArrayBufferView::Set(const v8::Arguments& arguments) {
       v8::Handle<v8::Object> object = arguments[0]->ToObject();
       if (object->IsArray()) {
         v8::Array* array = v8::Array::Cast(*arguments[0]);
-        if (offset + self->Length() > array->Length()) {
+        if (offset + array->Length() > self->Length()) {
           return v8::ThrowException(v8::Exception::RangeError(
                 v8::String::New("Offset is out of range")));
         }
         for (uint32_t index = 0; index < self->Length(); ++index) {
-          array->Set(index + offset, self->Get(index));
+          arguments.This()->Set(index + offset, array->Get(index));
         }
       } else if (GetTemplate()->HasInstance(object)) {
         ArrayBufferView* that = static_cast<ArrayBufferView*>(
             object->GetPointerFromInternalField(0));
-        if (offset + self->Length() > that->Length()) {
+        if (offset + that->Length() > self->Length()) {
           return v8::ThrowException(v8::Exception::RangeError(
                 v8::String::New("Offset is out of range")));
         }
-        self->Set(that, offset);
+        for (uint32_t index = 0; index < self->Length(); ++index) {
+          arguments.This()->Set(index + offset, object->Get(index));
+        }
       } else {
         return v8::ThrowException(v8::Exception::TypeError(
               v8::String::New("Argument one must be an array")));
@@ -193,19 +197,19 @@ v8::Handle<v8::Value> ArrayBufferView::SubArray(
     const v8::Arguments& arguments) {
   ArrayBufferView* self = static_cast<ArrayBufferView*>(
       arguments.This()->GetPointerFromInternalField(0));
-  int32_t end = self->Length();
+  int32_t end = self->GetByteLength();
   switch (arguments.Length()) {
   case 2:
     if (arguments[1]->IsInt32()) {
-      int32_t index = arguments[1]->ToUint32()->Value();
+      end = arguments[1]->ToUint32()->Value();
       if (0 > index) {
-        index = end + index;
-        if (0 > index) {
+        end = self->Length() + end;
+        if (0 > end) {
           end = 0;
         }
       } else {
-        if (index < end) {
-          end = index;
+        if (static_cast<uint32_t>(end) > self->Length()) {
+          end = self->Length() + 1;
         }
       }
     } else {
@@ -215,18 +219,29 @@ v8::Handle<v8::Value> ArrayBufferView::SubArray(
     // Fall through
   case 1:
     if (arguments[0]->IsInt32()) {
-      int32_t start = arguments[0]->ToInt32()->Value();
+      int32_t start =
+        arguments[0]->ToInt32()->Value();
       if (0 > start) {
-        start = end + start;
+        start = self->Length() + start;
         if (0 > start) {
           start = 0;
         }
       } else {
-        if (start > end) {
-          start = end;
+        if (static_cast<uint32_t>(start) > self->Length()) {
+          start = self->Length() + 1;
         }
       }
-      return self->SubArray(start, end);
+      int32_t length = end - start - 1;
+      if (0 > length) {
+        length = 0;
+      }
+      v8::TryCatch try_catch;
+      v8::Handle<v8::Value> value = self->New(self->GetArrayBuffer(),
+          start * self->BytesPerElement(), length);
+      if (value.IsEmpty()) {
+        return try_catch.ReThrow();
+      }
+      return value;
     } else {
       return v8::ThrowException(v8::Exception::TypeError(
             v8::String::New("Argument one must be a long")));
@@ -239,11 +254,124 @@ v8::Handle<v8::Value> ArrayBufferView::SubArray(
 
 // Protected
 v8::Handle<v8::Value> ArrayBufferView::Construct(
-    v8::Handle<v8::Object> array_buffer, uint32_t byte_offset,
-    uint32_t byte_length) {
-  array_buffer_ = v8::Persistent<v8::Object>::New(array_buffer);
-  byte_offset_ = byte_offset;
-  byte_length_ = byte_length;
+    const v8::Arguments& arguments, v8::ExternalArrayType type) {
+  uint32_t byte_offset = 0, length = 0;
+  switch (arguments.Length()) {
+  case 3:
+    if (arguments[2]->IsUint32()) {
+      length = arguments[2]->ToUint32()->Value();
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument three must be an unsigned long")));
+    }
+    // Fall through
+  case 2:
+    if (arguments[1]->IsUint32()) {
+      byte_offset = arguments[1]->ToUint32()->Value();
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument two must be an unsigned long")));
+    }
+    if (arguments[0]->IsObject()) {
+      if (!ArrayBuffer::GetTemplate()->HasInstance(arguments[0]->ToObject())) {
+        return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be an ArrayBuffer")));
+      }
+    } else {
+        return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be an object")));
+    }
+    // Fall through
+  case 1:
+    if (arguments[0]->IsUint32()) {
+      // TypedArray(unsigned long length)
+      byte_length_ = arguments[0]->ToUint32()->Value() * BytesPerElement();
+      v8::Handle<v8::Value> array_buffer = ArrayBuffer::New(byte_length_);
+      if (array_buffer->IsUndefined()) {
+        return array_buffer;
+      }
+      array_buffer_ = v8::Persistent<v8::Object>::New(array_buffer->ToObject());
+      byte_offset_ = 0;
+      arguments.This()->SetIndexedPropertiesToExternalArrayData(GetBuffer(),
+          type, Length());
+    } else if (arguments[0]->IsArray()) {
+      // TypedArray(type[] array)
+      v8::Array* array = v8::Array::Cast(*arguments[0]);
+      byte_length_ = array->Length() * BytesPerElement();
+      v8::Handle<v8::Value> array_buffer = ArrayBuffer::New(byte_length_);
+      if (array_buffer->IsUndefined()) {
+        return array_buffer;
+      }
+      array_buffer_ = v8::Persistent<v8::Object>::New(array_buffer->ToObject());
+      byte_offset_ = 0;
+      arguments.This()->SetIndexedPropertiesToExternalArrayData(GetBuffer(),
+          type, Length());
+      for (uint32_t index = 0; index < array->Length(); ++index) {
+        arguments.This()->Set(index, array->Get(index));
+      }
+    } else if (arguments[0]->IsObject()) {
+      v8::Handle<v8::Object> object = arguments[0]->ToObject();
+      if (GetTemplate()->HasInstance(object)) {
+        // TypedArray(TypedArray array)
+        ArrayBufferView* that = static_cast<ArrayBufferView*>(
+            object->GetPointerFromInternalField(0));
+        v8::Handle<v8::Value> array_buffer =
+          ArrayBuffer::New(that->GetByteLength());
+        if (array_buffer->IsUndefined()) {
+          return array_buffer;
+        }
+        array_buffer_ =
+          v8::Persistent<v8::Object>::New(array_buffer->ToObject());
+        byte_offset_ = 0;
+        byte_length_ = that->GetByteLength();
+        ::memcpy(GetBuffer(), that->GetBuffer(), that->GetByteLength());
+        arguments.This()->SetIndexedPropertiesToExternalArrayData(GetBuffer(),
+            type, Length());
+      } else if (ArrayBuffer::GetTemplate()->HasInstance(object)) {
+        // TypedArray(ArrayBuffer buffer,
+        //            optional unsigned long byteOffset,
+        //            option unsigned long length)
+        array_buffer_ = v8::Persistent<v8::Object>::New(object);
+        byte_offset_ = byte_offset;
+        moka::ArrayBuffer* buffer = static_cast<moka::ArrayBuffer*>(
+            object->GetPointerFromInternalField(0));
+        if (arguments.Length() == 3) {
+          byte_length_ = length * BytesPerElement();
+        } else {
+          byte_length_ = buffer->GetByteLength() - byte_offset_;
+        }
+        if (byte_offset_ >= buffer->GetByteLength()) {
+          return v8::ThrowException(v8::Exception::RangeError(
+                v8::String::New("Offset is out of range")));
+        }
+        if (byte_offset_ + byte_length_ > buffer->GetByteLength()) {
+          return v8::ThrowException(v8::Exception::RangeError(
+                v8::String::New("Length is out of range")));
+        }
+        if (byte_length_ % BytesPerElement()) {
+          std::stringstream message;
+          message << "Length minus offset must be a multiple of ";
+          message << BytesPerElement();
+          return v8::ThrowException(v8::Exception::RangeError(
+                v8::String::New(message.str().c_str())));
+        }
+        arguments.This()->SetIndexedPropertiesToExternalArrayData(
+            static_cast<int8_t*>(GetBuffer()) + byte_offset_, type, Length());
+      } else {
+        return v8::ThrowException(v8::Exception::TypeError(
+              v8::String::New("Argument one must be an ArrayBuffer"
+                " or an ArrayBufferView")));
+      }
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long,"
+              " and array or an object")));
+    }
+    break;
+  default:
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("One, two or three arguments required")));
+  }
   return v8::True();
 }
 

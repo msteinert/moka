@@ -45,6 +45,11 @@ public:
     return array_buffer_;
   }
 
+  void* GetBuffer() const {
+    return static_cast<moka::ArrayBuffer*>(
+        array_buffer_->GetPointerFromInternalField(0))->GetBuffer();
+  }
+
   uint32_t GetByteOffset() const {
     return byte_offset_;
   }
@@ -86,8 +91,8 @@ protected: // Protected methods
 
   virtual ~ArrayBufferView();
 
-  v8::Handle<v8::Value> Construct(v8::Handle<v8::Object> array_buffer,
-      uint32_t byte_offset, uint32_t byte_length);
+  v8::Handle<v8::Value> Construct(const v8::Arguments& arguments,
+      v8::ExternalArrayType type);
 
 private: // Private methods
   ArrayBufferView(ArrayBufferView const& that);
@@ -96,13 +101,8 @@ private: // Private methods
 
   virtual uint32_t BytesPerElement() const = 0;
 
-  virtual void Set(uint32_t index, v8::Handle<v8::Value> value) = 0;
-
-  virtual v8::Handle<v8::Value> Get(uint32_t index) const = 0;
-
-  virtual void Set(ArrayBufferView* that, uint32_t offset) = 0;
-
-  virtual v8::Handle<v8::Value> SubArray(int32_t begin, int32_t end) const = 0;
+  virtual v8::Handle<v8::Value> New(v8::Handle<v8::Value> buffer,
+      uint32_t byte_offset, uint32_t length) const = 0;
 
 protected: // Protected data
   v8::Persistent<v8::Object> array_buffer_;

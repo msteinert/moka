@@ -8,8 +8,6 @@ libmoka_la_SOURCES = \
 	array-buffer.h \
 	array-buffer-view.cc \
 	array-buffer-view.h \
-	int8-array.cc \
-	int8-array.h \
 	module.cc \
 	module-factory.cc \
 	module-factory.h \
@@ -18,7 +16,8 @@ libmoka_la_SOURCES = \
 	script-module.cc \
 	script-module.h \
 	so-module.cc \
-	so-module.h
+	so-module.h \
+	typed-array.h
 libmoka_la_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir) \
