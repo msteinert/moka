@@ -32,11 +32,27 @@
 #ifndef MOKA_MACROS_H
 #define MOKA_MACROS_H
 
+#include <endian.h>
+
 #if defined(__GNUC__) && (__GNUC__ >= 4)
 /// \brief Control symbol visibility
 #define MOKA_EXPORT __attribute__ ((visibility("default")))
 #else
 #define MOKA_EXPORT
+#endif
+
+#if BYTE_ORDER == LITTLE_ENDIAN
+#define MOKA_INT16_LITTLE_ENDIAN(bytes) \
+  static_cast<int16_t>(bytes[0] << 8 | bytes[1])
+#define MOKA_INT16_BIG_ENDIAN(bytes) \
+  static_cast<int16_t>(bytes[1] << 8 | bytes[0])
+#elif BYTE_ORDER == BIG_ENDIAN
+#define MOKA_INT16_LITTLE_ENDIAN(bytes) \
+  static_cast<int16_t>(bytes[1] << 8 | bytes[0])
+#define MOKA_INT16_BIG_ENDIAN(bytes) \
+  static_cast<int16_t>(bytes[0] << 8 | bytes[1])
+#else
+#error Unknown byte order
 #endif
 
 #endif // MOKA_MACROS_H

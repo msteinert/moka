@@ -28,11 +28,11 @@
 #ifndef MOKA_ARRAY_BUFFER_VIEW_H
 #define MOKA_ARRAY_BUFFER_VIEW_H
 
+#include "moka/array-buffer.h"
 #include <v8.h>
 
 namespace moka {
 
-class ArrayBuffer;
 class ArrayBufferView;
 
 } // namespace moka
@@ -84,6 +84,14 @@ protected: // Protected methods
 
   virtual ~ArrayBufferView();
 
+  v8::Handle<v8::Value> Construct(v8::Handle<v8::Object> array_buffer,
+      uint32_t byte_offset, uint32_t byte_length) {
+    array_buffer_ = v8::Persistent<v8::Object>::New(array_buffer);
+    byte_offset_ = byte_offset;
+    byte_length_ = byte_length;
+    return v8::True();
+  }
+
   v8::Handle<v8::Value> Construct(const v8::Arguments& arguments,
       v8::ExternalArrayType type);
 
@@ -92,9 +100,14 @@ private: // Private methods
 
   void operator=(ArrayBufferView const& that);
 
-  virtual uint32_t BytesPerElement() const = 0;
+  virtual uint32_t BytesPerElement() const {
+    return 1;
+  }
 
-  virtual v8::Handle<v8::Function> GetConstructor() const = 0;
+  virtual v8::Handle<v8::Value> NewInstance(int argc,
+      v8::Handle<v8::Value> argv[]) const {
+    return v8::Undefined();
+  }
 
 protected: // Protected data
   v8::Persistent<v8::Object> array_buffer_;

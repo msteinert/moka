@@ -8,6 +8,8 @@ libmoka_la_SOURCES = \
 	array-buffer.h \
 	array-buffer-view.cc \
 	array-buffer-view.h \
+	data-view.cc \
+	data-view.h \
 	module.cc \
 	module-factory.cc \
 	module-factory.h \

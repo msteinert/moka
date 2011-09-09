@@ -50,9 +50,11 @@ public:
     templ->SetClassName(v8::String::NewSymbol(name));
     templ->Inherit(ArrayBufferView::GetTemplate());
     templ->InstanceTemplate()->SetInternalFieldCount(1);
+    // Constants
     templ->Set(v8::String::NewSymbol("BYTES_PER_ELEMENT"),
         v8::Uint32::New(sizeof(T)),
         static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
+    // Properties
     templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("length"),
         Length);
     templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
@@ -90,9 +92,8 @@ private: // V8 interface
 
   static v8::Handle<v8::Value> Length(v8::Local<v8::String> property,
       const v8::AccessorInfo &info) {
-    ArrayBufferView* self = static_cast<ArrayBufferView*>(
-        info.This()->GetPointerFromInternalField(0));
-    return v8::Uint32::New(self->Length());
+    return v8::Uint32::New(static_cast<ArrayBufferView*>(
+          info.This()->GetPointerFromInternalField(0))->Length());
   }
 
 private: // Private methods
@@ -104,8 +105,9 @@ private: // Private methods
     return sizeof(T);
   }
 
-  v8::Handle<v8::Function> GetConstructor() const {
-    return GetTemplate()->GetFunction();
+  v8::Handle<v8::Value> NewInstance(int argc,
+      v8::Handle<v8::Value> argv[]) const {
+    return GetTemplate()->GetFunction()->NewInstance(argc, argv);
   }
 };
 

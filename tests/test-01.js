@@ -32,3 +32,14 @@ for (var i = 0; i < a.length; ++i) {
 	print(a[i]);
 }
 print();
+
+var b = new DataView(a.arrayBuffer);
+for (var i = 0; i < b.byteLength - (Int16Array.BYTES_PER_ELEMENT - 1); ++i) {
+	print(b.getInt16(i, false));
+}
+print();
+
+for (var i = 0; i < b.byteLength - (Int16Array.BYTES_PER_ELEMENT - 1); ++i) {
+	print(b.getInt16(i, true));
+}
+print();

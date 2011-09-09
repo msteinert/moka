@@ -30,7 +30,6 @@
 #endif
 
 #include <cstring>
-#include "moka/array-buffer.h"
 #include "moka/array-buffer-view.h"
 #include "moka/module.h"
 #include <sstream>
@@ -223,8 +222,7 @@ v8::Handle<v8::Value> ArrayBufferView::SubArray(
         v8::Uint32::New(start * self->BytesPerElement()),
         v8::Uint32::New(length)
       };
-      v8::Handle<v8::Value> value =
-        self->GetConstructor()->NewInstance(3, argv);
+      v8::Handle<v8::Value> value = self->NewInstance(3, argv);
       if (value.IsEmpty()) {
         return try_catch.ReThrow();
       }

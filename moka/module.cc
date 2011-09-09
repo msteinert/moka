@@ -37,6 +37,7 @@
 #include <cstring>
 #include <libgen.h>
 #include "moka/array-buffer.h"
+#include "moka/data-view.h"
 #include "moka/module.h"
 #include "moka/typed-array.h"
 
@@ -88,7 +89,7 @@ bool Module::Initialize() {
     context_->Global()->Set(v8::String::New("print"),
         print_templ->GetFunction());
   }
-  // Add the ArrayBuffer objects
+  // Add the TypedArray objects
   context_->Global()->Set(v8::String::NewSymbol("ArrayBuffer"),
       ArrayBuffer::GetTemplate()->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Int8Array"),
@@ -115,6 +116,8 @@ bool Module::Initialize() {
   context_->Global()->Set(v8::String::NewSymbol("Double64Array"),
       TypedArray<double, v8::kExternalDoubleArray>::GetTemplate(
         "Double64Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("DataView"),
+      DataView::GetTemplate()->GetFunction());
   // Add the require object
   context_->Global()->Set(v8::String::NewSymbol("require"), require_);
   // Initialize exports
