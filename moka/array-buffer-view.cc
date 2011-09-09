@@ -62,8 +62,6 @@ v8::Handle<v8::FunctionTemplate> ArrayBufferView::GetTemplate() {
       ByteOffset);
   templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("byteLength"),
       ByteLength);
-  templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("length"),
-      Length);
   // Methods
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("get"),
       v8::FunctionTemplate::New(Get)->GetFunction());
@@ -95,13 +93,6 @@ v8::Handle<v8::Value> ArrayBufferView::ByteLength(
   ArrayBufferView* self = static_cast<ArrayBufferView*>(
       info.This()->GetPointerFromInternalField(0));
   return v8::Uint32::New(self->byte_length_);
-}
-
-v8::Handle<v8::Value> ArrayBufferView::Length(
-    v8::Local<v8::String> property, const v8::AccessorInfo &info) {
-  ArrayBufferView* self = static_cast<ArrayBufferView*>(
-      info.This()->GetPointerFromInternalField(0));
-  return v8::Uint32::New(self->Length());
 }
 
 v8::Handle<v8::Value> ArrayBufferView::Get(const v8::Arguments& arguments) {
@@ -227,8 +218,13 @@ v8::Handle<v8::Value> ArrayBufferView::SubArray(
         length = 0;
       }
       v8::TryCatch try_catch;
-      v8::Handle<v8::Value> value = self->New(self->GetArrayBuffer(),
-          start * self->BytesPerElement(), length);
+      v8::Handle<v8::Value> argv[3] = {
+        self->GetArrayBuffer(),
+        v8::Uint32::New(start * self->BytesPerElement()),
+        v8::Uint32::New(length)
+      };
+      v8::Handle<v8::Value> value =
+        self->GetConstructor()->NewInstance(3, argv);
       if (value.IsEmpty()) {
         return try_catch.ReThrow();
       }

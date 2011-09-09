@@ -1,27 +1,7 @@
 'use strict';
 
-/*
-var c = new DoubleArray(10);
-for (var i = 0; i < c.length; ++i) {
-	c[i] = i * Math.PI;
-	print(c[i]);
-	c.set(i, 2 * c[i]);
-	print(c.get(i));
-}
-
-var d = new Int32Array([1, 2, 3, 4, 5]);
-for (var i = 0; i < d.length; ++i) {
-	print(d[i]);
-}
-
-var e = new Int16Array(d);
-for (var i = 0; i < e.length; ++i) {
-	print(e[i]);
-}
-*/
-
 function toArray(object) {
-	if (!object.length) {
+	if (object.length == undefined) {
 		object.length = Object.keys(object).length;
 	}
 	return Array.prototype.slice.call(object, 0);
@@ -37,7 +17,6 @@ for (var i = 0; i < y.length; ++i) {
 }
 var u = toArray(JSON.parse(JSON.stringify(y)));
 var w = new Float32Array(u);
-print('foo: ' + Float32Array.BYTES_PER_ELEMENT);
 print();
 
 var z = new Uint32Array(w);

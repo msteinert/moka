@@ -41,10 +41,6 @@ template <typename T, v8::ExternalArrayType A> class TypedArray;
 template <typename T, v8::ExternalArrayType A>
 class moka::TypedArray: public moka::ArrayBufferView {
 public:
-  TypedArray() {};
-
-  virtual ~TypedArray() {};
-
   static v8::Handle<v8::FunctionTemplate> GetTemplate(const char* name = NULL) {
     static v8::Persistent<v8::FunctionTemplate> templ_;
     if (!templ_.IsEmpty()) {
@@ -57,6 +53,8 @@ public:
     templ->Set(v8::String::NewSymbol("BYTES_PER_ELEMENT"),
         v8::Uint32::New(sizeof(T)),
         static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
+    templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("length"),
+        Length);
     templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
     return templ_;
   }
@@ -90,23 +88,24 @@ private: // V8 interface
     object.Clear();
   }
 
+  static v8::Handle<v8::Value> Length(v8::Local<v8::String> property,
+      const v8::AccessorInfo &info) {
+    ArrayBufferView* self = static_cast<ArrayBufferView*>(
+        info.This()->GetPointerFromInternalField(0));
+    return v8::Uint32::New(self->Length());
+  }
+
 private: // Private methods
-  TypedArray(TypedArray const& that);
+  TypedArray() {};
 
-  void operator=(TypedArray const& that);
+  virtual ~TypedArray() {};
 
-  virtual uint32_t BytesPerElement() const {
+  uint32_t BytesPerElement() const {
     return sizeof(T);
   }
 
-  virtual v8::Handle<v8::Value> New(v8::Handle<v8::Value> buffer,
-      uint32_t byte_offset, uint32_t length) const {
-    v8::Handle<v8::Value> argv[3] = {
-      buffer,
-      v8::Uint32::New(byte_offset),
-      v8::Uint32::New(length)
-    };
-    return GetTemplate()->GetFunction()->NewInstance(3, argv);
+  v8::Handle<v8::Function> GetConstructor() const {
+    return GetTemplate()->GetFunction();
   }
 };
 

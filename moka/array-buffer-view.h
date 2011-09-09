@@ -64,8 +64,6 @@ public:
   }
 
 private: // V8 interface
-  static void Delete(v8::Persistent<v8::Value> object, void* parameters);
-
   static v8::Handle<v8::Value> ArrayBuffer(v8::Local<v8::String> property,
       const v8::AccessorInfo &info);
 
@@ -73,9 +71,6 @@ private: // V8 interface
       const v8::AccessorInfo &info);
 
   static v8::Handle<v8::Value> ByteLength(v8::Local<v8::String> property,
-      const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Value> Length(v8::Local<v8::String> property,
       const v8::AccessorInfo &info);
 
   static v8::Handle<v8::Value> Get(const v8::Arguments& arguments);
@@ -99,8 +94,7 @@ private: // Private methods
 
   virtual uint32_t BytesPerElement() const = 0;
 
-  virtual v8::Handle<v8::Value> New(v8::Handle<v8::Value> buffer,
-      uint32_t byte_offset, uint32_t length) const = 0;
+  virtual v8::Handle<v8::Function> GetConstructor() const = 0;
 
 protected: // Protected data
   v8::Persistent<v8::Object> array_buffer_;
