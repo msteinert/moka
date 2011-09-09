@@ -109,12 +109,12 @@ bool Module::Initialize() {
   context_->Global()->Set(v8::String::NewSymbol("Uint32Array"),
       TypedArray<uint32_t, v8::kExternalUnsignedIntArray>::GetTemplate(
         "Uint32Array")->GetFunction());
-  context_->Global()->Set(v8::String::NewSymbol("FloatArray"),
+  context_->Global()->Set(v8::String::NewSymbol("Float32Array"),
       TypedArray<float, v8::kExternalFloatArray>::GetTemplate(
-        "FloatArray")->GetFunction());
-  context_->Global()->Set(v8::String::NewSymbol("DoubleArray"),
+        "Float32Array")->GetFunction());
+  context_->Global()->Set(v8::String::NewSymbol("Double64Array"),
       TypedArray<double, v8::kExternalDoubleArray>::GetTemplate(
-        "DoubleArray")->GetFunction());
+        "Double64Array")->GetFunction());
   // Add the require object
   context_->Global()->Set(v8::String::NewSymbol("require"), require_);
   // Initialize exports

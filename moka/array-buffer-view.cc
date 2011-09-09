@@ -62,8 +62,6 @@ v8::Handle<v8::FunctionTemplate> ArrayBufferView::GetTemplate() {
       ByteOffset);
   templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("byteLength"),
       ByteLength);
-  templ->PrototypeTemplate()->SetAccessor(
-      v8::String::NewSymbol("BYTES_PER_ELEMENT"), BytesPerElement);
   templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("length"),
       Length);
   // Methods
@@ -97,13 +95,6 @@ v8::Handle<v8::Value> ArrayBufferView::ByteLength(
   ArrayBufferView* self = static_cast<ArrayBufferView*>(
       info.This()->GetPointerFromInternalField(0));
   return v8::Uint32::New(self->byte_length_);
-}
-
-v8::Handle<v8::Value> ArrayBufferView::BytesPerElement(
-    v8::Local<v8::String> property, const v8::AccessorInfo &info) {
-  ArrayBufferView* self = static_cast<ArrayBufferView*>(
-      info.This()->GetPointerFromInternalField(0));
-  return v8::Uint32::New(self->BytesPerElement());
 }
 
 v8::Handle<v8::Value> ArrayBufferView::Length(

@@ -59,7 +59,8 @@ public:
   }
 
   uint32_t Length() const {
-    return byte_length_ / BytesPerElement();
+    uint32_t bytes_per_element = BytesPerElement();
+    return bytes_per_element ? byte_length_ / bytes_per_element : 0;
   }
 
 private: // V8 interface
@@ -72,9 +73,6 @@ private: // V8 interface
       const v8::AccessorInfo &info);
 
   static v8::Handle<v8::Value> ByteLength(v8::Local<v8::String> property,
-      const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Value> BytesPerElement(v8::Local<v8::String> property,
       const v8::AccessorInfo &info);
 
   static v8::Handle<v8::Value> Length(v8::Local<v8::String> property,

@@ -54,6 +54,9 @@ public:
     templ->SetClassName(v8::String::NewSymbol(name));
     templ->Inherit(ArrayBufferView::GetTemplate());
     templ->InstanceTemplate()->SetInternalFieldCount(1);
+    templ->Set(v8::String::NewSymbol("BYTES_PER_ELEMENT"),
+        v8::Uint32::New(sizeof(T)),
+        static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
     templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
     return templ_;
   }
