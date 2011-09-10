@@ -32,7 +32,6 @@
 
 namespace moka {
 
-class ArrayBuffer;
 class DataView;
 
 } // namespace moka

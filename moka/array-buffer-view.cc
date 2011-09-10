@@ -183,7 +183,7 @@ v8::Handle<v8::Value> ArrayBufferView::SubArray(
   case 2:
     if (arguments[1]->IsInt32()) {
       end = arguments[1]->ToUint32()->Value();
-      if (0 > index) {
+      if (0 > end) {
         end = self->Length() + end;
         if (0 > end) {
           end = 0;

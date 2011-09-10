@@ -110,7 +110,8 @@ v8::Handle<v8::Value> ArrayBuffer::New(const v8::Arguments& arguments) {
 
 void ArrayBuffer::Delete(v8::Persistent<v8::Value> object, void* parameters) {
   delete static_cast<ArrayBuffer*>(parameters);
-  v8::V8::AdjustAmountOfExternalAllocatedMemory(-sizeof(ArrayBuffer));
+  v8::V8::AdjustAmountOfExternalAllocatedMemory(
+      static_cast<int>(-sizeof(ArrayBuffer)));
   object.Dispose();
   object.Clear();
 }

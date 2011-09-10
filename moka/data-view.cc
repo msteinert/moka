@@ -154,7 +154,8 @@ v8::Handle<v8::Value> DataView::New(const v8::Arguments& arguments) {
 
 void DataView::Delete(v8::Persistent<v8::Value> object, void* parameters) {
   delete static_cast<DataView*>(parameters);
-  v8::V8::AdjustAmountOfExternalAllocatedMemory(-sizeof(DataView));
+  v8::V8::AdjustAmountOfExternalAllocatedMemory(
+      static_cast<int>(-sizeof(DataView)));
   object.Dispose();
   object.Clear();
 } 

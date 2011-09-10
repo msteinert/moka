@@ -85,7 +85,8 @@ private: // V8 interface
 
   static void Delete(v8::Persistent<v8::Value> object, void* parameters) {
     delete static_cast<TypedArray*>(parameters);
-    v8::V8::AdjustAmountOfExternalAllocatedMemory(-sizeof(TypedArray));
+    v8::V8::AdjustAmountOfExternalAllocatedMemory(
+        static_cast<int>(-sizeof(TypedArray)));
     object.Dispose();
     object.Clear();
   }
