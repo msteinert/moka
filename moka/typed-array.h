@@ -29,87 +29,47 @@
 #define MOKA_TYPED_ARRAY_H
 
 #include "moka/array-buffer-view.h"
-#include "moka/module.h"
-#include <v8.h>
 
 namespace moka {
 
-template <typename T, v8::ExternalArrayType A> class TypedArray;
+class TypedArray;
 
 } // namespace moka
 
-template <typename T, v8::ExternalArrayType A>
 class moka::TypedArray: public moka::ArrayBufferView {
 public:
-  static v8::Handle<v8::FunctionTemplate> GetTemplate(const char* name = NULL) {
-    static v8::Persistent<v8::FunctionTemplate> templ_;
-    if (!templ_.IsEmpty()) {
-      return templ_;
-    }
-    v8::Local<v8::FunctionTemplate> templ = v8::FunctionTemplate::New(New);
-    templ->SetClassName(v8::String::NewSymbol(name));
-    templ->Inherit(ArrayBufferView::GetTemplate());
-    templ->InstanceTemplate()->SetInternalFieldCount(1);
-    // Constants
-    templ->Set(v8::String::NewSymbol("BYTES_PER_ELEMENT"),
-        v8::Uint32::New(sizeof(T)),
-        static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
-    // Properties
-    templ->PrototypeTemplate()->SetAccessor(v8::String::NewSymbol("length"),
-        Length);
-    templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
-    return templ_;
+  static v8::Handle<v8::FunctionTemplate> GetTemplate();
+
+  uint32_t GetLength() const {
+    return length_;
   }
 
 private: // V8 interface
-  static v8::Handle<v8::Value> New(const v8::Arguments& arguments) {
-    if (!arguments.IsConstructCall()) {
-      return Module::ConstructCall(GetTemplate(), arguments);
-    }
-    TypedArray* self = new TypedArray;
-    if (!self) {
-      return v8::ThrowException(Module::ErrnoException::New(ENOMEM));
-    }
-    v8::Handle<v8::Value> value = self->Construct(arguments, A);
-    if (value->IsUndefined()) {
-      delete self;
-      return value;
-    }
-    v8::V8::AdjustAmountOfExternalAllocatedMemory(sizeof(TypedArray));
-    v8::Persistent<v8::Object> typed_array =
-      v8::Persistent<v8::Object>::New(arguments.This());
-    typed_array->SetInternalField(0, v8::External::New(self));
-    typed_array.MakeWeak(static_cast<void*>(self), Delete);
-    return typed_array;
-  }
-
-  static void Delete(v8::Persistent<v8::Value> object, void* parameters) {
-    delete static_cast<TypedArray*>(parameters);
-    v8::V8::AdjustAmountOfExternalAllocatedMemory(
-        static_cast<int>(-sizeof(TypedArray)));
-    object.Dispose();
-    object.Clear();
-  }
-
   static v8::Handle<v8::Value> Length(v8::Local<v8::String> property,
-      const v8::AccessorInfo &info) {
-    return v8::Uint32::New(static_cast<ArrayBufferView*>(
-          info.This()->GetPointerFromInternalField(0))->Length());
-  }
+      const v8::AccessorInfo &info);
+
+  static v8::Handle<v8::Value> Get(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> Set(const v8::Arguments& arguments);
+
+  static v8::Handle<v8::Value> SubArray(const v8::Arguments& arguments);
+
+protected: // Protected methods
+  TypedArray();
+
+  virtual ~TypedArray() {}
+
+  v8::Handle<v8::Value> Construct(const v8::Arguments& arguments,
+      v8::ExternalArrayType type);
 
 private: // Private methods
-  TypedArray() {};
+  virtual v8::Handle<v8::Object> NewInstance(int argc,
+      v8::Handle<v8::Value> argv[]) const = 0;
 
-  virtual ~TypedArray() {};
+  virtual uint32_t BytesPerElement() const = 0;
 
-  uint32_t BytesPerElement() const {
-    return sizeof(T);
-  }
-
-  v8::Handle<v8::Value> NewInstance(int argc,
-      v8::Handle<v8::Value> argv[]) const {
-    return GetTemplate()->GetFunction()->NewInstance(argc, argv);
-  }
+private: // Private data
+  uint32_t length_;
 };
 
 #endif // MOKA_TYPED_ARRAY_H

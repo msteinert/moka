@@ -19,7 +19,9 @@ libmoka_la_SOURCES = \
 	script-module.h \
 	so-module.cc \
 	so-module.h \
-	typed-array.h
+	typed-array.cc \
+	typed-array.h \
+	typed-array-view.h
 libmoka_la_CPPFLAGS = \
 	-I$(top_srcdir) \
 	-I$(top_builddir) \

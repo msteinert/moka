@@ -58,11 +58,6 @@ public:
     return byte_length_;
   }
 
-  uint32_t Length() const {
-    uint32_t bytes_per_element = BytesPerElement();
-    return bytes_per_element ? byte_length_ / bytes_per_element : 0;
-  }
-
 private: // V8 interface
   static v8::Handle<v8::Value> ArrayBuffer(v8::Local<v8::String> property,
       const v8::AccessorInfo &info);
@@ -72,12 +67,6 @@ private: // V8 interface
 
   static v8::Handle<v8::Value> ByteLength(v8::Local<v8::String> property,
       const v8::AccessorInfo &info);
-
-  static v8::Handle<v8::Value> Get(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> Set(const v8::Arguments& arguments);
-
-  static v8::Handle<v8::Value> SubArray(const v8::Arguments& arguments);
 
 protected: // Protected methods
   ArrayBufferView();
@@ -92,22 +81,10 @@ protected: // Protected methods
     return v8::True();
   }
 
-  v8::Handle<v8::Value> Construct(const v8::Arguments& arguments,
-      v8::ExternalArrayType type);
-
 private: // Private methods
   ArrayBufferView(ArrayBufferView const& that);
 
   void operator=(ArrayBufferView const& that);
-
-  virtual uint32_t BytesPerElement() const {
-    return 1;
-  }
-
-  virtual v8::Handle<v8::Value> NewInstance(int argc,
-      v8::Handle<v8::Value> argv[]) const {
-    return v8::Undefined();
-  }
 
 protected: // Protected data
   v8::Persistent<v8::Object> array_buffer_;

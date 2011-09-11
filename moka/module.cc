@@ -39,7 +39,7 @@
 #include "moka/array-buffer.h"
 #include "moka/data-view.h"
 #include "moka/module.h"
-#include "moka/typed-array.h"
+#include "moka/typed-array-view.h"
 
 namespace moka {
 
@@ -93,28 +93,28 @@ bool Module::Initialize() {
   context_->Global()->Set(v8::String::NewSymbol("ArrayBuffer"),
       ArrayBuffer::GetTemplate()->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Int8Array"),
-      TypedArray<int8_t, v8::kExternalByteArray>::GetTemplate(
+      TypedArrayView<int8_t, v8::kExternalByteArray>::GetTemplate(
         "Int8Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Uint8Array"),
-      TypedArray<uint8_t, v8::kExternalUnsignedByteArray>::GetTemplate(
+      TypedArrayView<uint8_t, v8::kExternalUnsignedByteArray>::GetTemplate(
         "Uint8Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Int16Array"),
-      TypedArray<int16_t, v8::kExternalShortArray>::GetTemplate(
+      TypedArrayView<int16_t, v8::kExternalShortArray>::GetTemplate(
         "Int16Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Uint16Array"),
-      TypedArray<uint16_t, v8::kExternalUnsignedShortArray>::GetTemplate(
+      TypedArrayView<uint16_t, v8::kExternalUnsignedShortArray>::GetTemplate(
         "Uint16Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Int32Array"),
-      TypedArray<int32_t, v8::kExternalIntArray>::GetTemplate(
+      TypedArrayView<int32_t, v8::kExternalIntArray>::GetTemplate(
         "Int32Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Uint32Array"),
-      TypedArray<uint32_t, v8::kExternalUnsignedIntArray>::GetTemplate(
+      TypedArrayView<uint32_t, v8::kExternalUnsignedIntArray>::GetTemplate(
         "Uint32Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Float32Array"),
-      TypedArray<float, v8::kExternalFloatArray>::GetTemplate(
+      TypedArrayView<float, v8::kExternalFloatArray>::GetTemplate(
         "Float32Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("Double64Array"),
-      TypedArray<double, v8::kExternalDoubleArray>::GetTemplate(
+      TypedArrayView<double, v8::kExternalDoubleArray>::GetTemplate(
         "Double64Array")->GetFunction());
   context_->Global()->Set(v8::String::NewSymbol("DataView"),
       DataView::GetTemplate()->GetFunction());
