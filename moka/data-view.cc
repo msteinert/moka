@@ -240,31 +240,220 @@ v8::Handle<v8::Value> DataView::GetInt16(const v8::Arguments& arguments) {
 }
 
 v8::Handle<v8::Value> DataView::GetUint16(const v8::Arguments& arguments) {
-  return v8::Undefined();
+  bool little_endian = false;
+  switch (arguments.Length()) {
+  case 2:
+    little_endian = arguments[1]->ToBoolean()->Value();
+    // Fall through
+  case 1:
+    if (arguments[0]->IsUint32()) {
+      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
+      ArrayBufferView* self = static_cast<ArrayBufferView*>(
+          arguments.This()->GetPointerFromInternalField(0));
+      if (byte_offset + sizeof(uint16_t) > self->GetByteLength()) {
+        return v8::ThrowException(v8::Exception::RangeError(
+              v8::String::New("Attempt to read beyond the end of the view")));
+      }
+      uint16_t value;
+      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
+      if (little_endian) {
+        value = MOKA_UINT16_LITTLE_ENDIAN(buffer);
+      } else {
+        value = MOKA_UINT16_BIG_ENDIAN(buffer);
+      }
+      return v8::Uint32::New(value);
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long")));
+    }
+  default:
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("One argument required")));
+  }
 }
 
 v8::Handle<v8::Value> DataView::GetInt32(const v8::Arguments& arguments) {
-  return v8::Undefined();
+  bool little_endian = false;
+  switch (arguments.Length()) {
+  case 2:
+    little_endian = arguments[1]->ToBoolean()->Value();
+    // Fall through
+  case 1:
+    if (arguments[0]->IsUint32()) {
+      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
+      ArrayBufferView* self = static_cast<ArrayBufferView*>(
+          arguments.This()->GetPointerFromInternalField(0));
+      if (byte_offset + sizeof(int32_t) > self->GetByteLength()) {
+        return v8::ThrowException(v8::Exception::RangeError(
+              v8::String::New("Attempt to read beyond the end of the view")));
+      }
+      int32_t value;
+      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
+      if (little_endian) {
+        value = MOKA_INT32_LITTLE_ENDIAN(buffer);
+      } else {
+        value = MOKA_INT32_BIG_ENDIAN(buffer);
+      }
+      return v8::Int32::New(value);
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long")));
+    }
+  default:
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("One argument required")));
+  }
 }
 
 v8::Handle<v8::Value> DataView::GetUint32(const v8::Arguments& arguments) {
-  return v8::Undefined();
+  bool little_endian = false;
+  switch (arguments.Length()) {
+  case 2:
+    little_endian = arguments[1]->ToBoolean()->Value();
+    // Fall through
+  case 1:
+    if (arguments[0]->IsUint32()) {
+      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
+      ArrayBufferView* self = static_cast<ArrayBufferView*>(
+          arguments.This()->GetPointerFromInternalField(0));
+      if (byte_offset + sizeof(uint32_t) > self->GetByteLength()) {
+        return v8::ThrowException(v8::Exception::RangeError(
+              v8::String::New("Attempt to read beyond the end of the view")));
+      }
+      uint32_t value;
+      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
+      if (little_endian) {
+        value = MOKA_UINT32_LITTLE_ENDIAN(buffer);
+      } else {
+        value = MOKA_UINT32_BIG_ENDIAN(buffer);
+      }
+      return v8::Uint32::New(value);
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long")));
+    }
+  default:
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("One argument required")));
+  }
 }
 
 v8::Handle<v8::Value> DataView::GetFloat32(const v8::Arguments& arguments) {
-  return v8::Undefined();
+  bool little_endian = false;
+  switch (arguments.Length()) {
+  case 2:
+    little_endian = arguments[1]->ToBoolean()->Value();
+    // Fall through
+  case 1:
+    if (arguments[0]->IsUint32()) {
+      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
+      ArrayBufferView* self = static_cast<ArrayBufferView*>(
+          arguments.This()->GetPointerFromInternalField(0));
+      if (byte_offset + sizeof(float) > self->GetByteLength()) {
+        return v8::ThrowException(v8::Exception::RangeError(
+              v8::String::New("Attempt to read beyond the end of the view")));
+      }
+      float value;
+      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
+      if (little_endian) {
+        value = MOKA_FLOAT_LITTLE_ENDIAN(buffer);
+      } else {
+        value = MOKA_FLOAT_BIG_ENDIAN(buffer);
+      }
+      return v8::Number::New(value);
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long")));
+    }
+  default:
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("One argument required")));
+  }
 }
 
 v8::Handle<v8::Value> DataView::GetDouble64(const v8::Arguments& arguments) {
-  return v8::Undefined();
+  bool little_endian = false;
+  switch (arguments.Length()) {
+  case 2:
+    little_endian = arguments[1]->ToBoolean()->Value();
+    // Fall through
+  case 1:
+    if (arguments[0]->IsUint32()) {
+      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
+      ArrayBufferView* self = static_cast<ArrayBufferView*>(
+          arguments.This()->GetPointerFromInternalField(0));
+      if (byte_offset + sizeof(double) > self->GetByteLength()) {
+        return v8::ThrowException(v8::Exception::RangeError(
+              v8::String::New("Attempt to read beyond the end of the view")));
+      }
+      double value = 0;
+      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
+      if (little_endian) {
+        value = MOKA_DOUBLE_LITTLE_ENDIAN(buffer);
+      } else {
+        value = MOKA_DOUBLE_BIG_ENDIAN(buffer);
+      }
+      return v8::Number::New(value);
+    } else {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long")));
+    }
+  default:
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("One argument required")));
+  }
 }
 
 v8::Handle<v8::Value> DataView::SetInt8(const v8::Arguments& arguments) {
-  return v8::Undefined();
+  if (2 == arguments.Length()) {
+    if (!arguments[1]->IsInt32()) {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument two must be a byte")));
+    }
+    if (!arguments[0]->IsUint32()) {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long")));
+    }
+    uint32_t byte_offset = arguments[0]->ToUint32()->Value();
+    ArrayBufferView* self = static_cast<ArrayBufferView*>(
+        arguments.This()->GetPointerFromInternalField(0));
+    if (byte_offset >= self->GetByteLength()) {
+      return v8::ThrowException(v8::Exception::RangeError(
+            v8::String::New("Attempt to write beyond the end of the view")));
+    }
+    static_cast<int8_t*>(self->GetBuffer())[byte_offset] =
+      static_cast<int8_t>(arguments[1]->ToInt32()->Value());
+    return v8::Null();
+  } else {
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("Two arguments required")));
+  }
 }
 
 v8::Handle<v8::Value> DataView::SetUint8(const v8::Arguments& arguments) {
-  return v8::Undefined();
+  if (2 == arguments.Length()) {
+    if (!arguments[1]->IsUint32()) {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument two must be an unsigned byte")));
+    }
+    if (!arguments[0]->IsUint32()) {
+      return v8::ThrowException(v8::Exception::TypeError(
+            v8::String::New("Argument one must be an unsigned long")));
+    }
+    uint32_t byte_offset = arguments[0]->ToUint32()->Value();
+    ArrayBufferView* self = static_cast<ArrayBufferView*>(
+        arguments.This()->GetPointerFromInternalField(0));
+    if (byte_offset >= self->GetByteLength()) {
+      return v8::ThrowException(v8::Exception::RangeError(
+            v8::String::New("Attempt to write beyond the end of the view")));
+    }
+    static_cast<uint8_t*>(self->GetBuffer())[byte_offset] =
+      static_cast<uint8_t>(arguments[1]->ToUint32()->Value());
+    return v8::Null();
+  } else {
+    return v8::ThrowException(v8::Exception::TypeError(
+          v8::String::New("Two arguments required")));
+  }
 }
 
 v8::Handle<v8::Value> DataView::SetInt16(const v8::Arguments& arguments) {

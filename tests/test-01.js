@@ -42,4 +42,6 @@ print();
 for (var i = 0; i < b.byteLength - (Int16Array.BYTES_PER_ELEMENT - 1); ++i) {
 	print(b.getInt16(i, true));
 }
+print('foo: ' + b.getDouble64(0, false));
+print('foo: ' + b.getDouble64(0, true));
 print();
