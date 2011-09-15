@@ -29,7 +29,6 @@
 #include "config.h"
 #endif
 
-#include <arpa/inet.h>
 #include <cerrno>
 #include "moka/data-view.h"
 #include "moka/module.h"
@@ -48,37 +47,37 @@ v8::Handle<v8::FunctionTemplate> DataView::GetTemplate() {
   templ->InstanceTemplate()->SetInternalFieldCount(1);
   // Methods
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getInt8"),
-      v8::FunctionTemplate::New(GetInt8)->GetFunction());
+      v8::FunctionTemplate::New(GetByte<int8_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getUint8"),
-      v8::FunctionTemplate::New(GetUint8)->GetFunction());
+      v8::FunctionTemplate::New(GetByte<uint8_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getInt16"),
-      v8::FunctionTemplate::New(GetInt16)->GetFunction());
+      v8::FunctionTemplate::New(Get<int16_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getUint16"),
-      v8::FunctionTemplate::New(GetUint16)->GetFunction());
+      v8::FunctionTemplate::New(Get<uint16_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getInt32"),
-      v8::FunctionTemplate::New(GetInt32)->GetFunction());
+      v8::FunctionTemplate::New(Get<int32_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getUint32"),
-      v8::FunctionTemplate::New(GetUint32)->GetFunction());
+      v8::FunctionTemplate::New(Get<uint32_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getFloat32"),
-      v8::FunctionTemplate::New(GetFloat32)->GetFunction());
+      v8::FunctionTemplate::New(Get<float>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("getDouble64"),
-      v8::FunctionTemplate::New(GetDouble64)->GetFunction());
+      v8::FunctionTemplate::New(Get<double>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setInt8"),
-      v8::FunctionTemplate::New(SetInt8)->GetFunction());
+      v8::FunctionTemplate::New(SetByte<int8_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setUint8"),
-      v8::FunctionTemplate::New(SetUint8)->GetFunction());
+      v8::FunctionTemplate::New(SetByte<int8_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setInt16"),
-      v8::FunctionTemplate::New(SetInt16)->GetFunction());
+      v8::FunctionTemplate::New(SetSigned<int16_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setUint16"),
-      v8::FunctionTemplate::New(SetUint16)->GetFunction());
+      v8::FunctionTemplate::New(SetUnsigned<uint16_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setInt32"),
-      v8::FunctionTemplate::New(SetInt32)->GetFunction());
+      v8::FunctionTemplate::New(SetSigned<int32_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setUint32"),
-      v8::FunctionTemplate::New(SetUint32)->GetFunction());
+      v8::FunctionTemplate::New(SetUnsigned<uint32_t>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setFloat32"),
-      v8::FunctionTemplate::New(SetFloat32)->GetFunction());
+      v8::FunctionTemplate::New(SetRational<float>)->GetFunction());
   templ->PrototypeTemplate()->Set(v8::String::NewSymbol("setDouble64"),
-      v8::FunctionTemplate::New(SetDouble64)->GetFunction());
+      v8::FunctionTemplate::New(SetRational<double>)->GetFunction());
   templ_ = v8::Persistent<v8::FunctionTemplate>::New(templ);
   return templ_;
 }
@@ -159,328 +158,6 @@ void DataView::Delete(v8::Persistent<v8::Value> object, void* parameters) {
   object.Dispose();
   object.Clear();
 } 
-
-v8::Handle<v8::Value> DataView::GetInt8(const v8::Arguments& arguments) {
-  switch (arguments.Length()) {
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset >= self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      return v8::Int32::New(
-          static_cast<int8_t*>(self->GetBuffer())[byte_offset]);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::GetUint8(const v8::Arguments& arguments) {
-  switch (arguments.Length()) {
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset >= self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      return v8::Uint32::New(
-          static_cast<uint8_t*>(self->GetBuffer())[byte_offset]);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::GetInt16(const v8::Arguments& arguments) {
-  bool little_endian = false;
-  switch (arguments.Length()) {
-  case 2:
-    little_endian = arguments[1]->ToBoolean()->Value();
-    // Fall through
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset + sizeof(int16_t) > self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      int16_t value;
-      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
-      if (little_endian) {
-        value = MOKA_INT16_LITTLE_ENDIAN(buffer);
-      } else {
-        value = MOKA_INT16_BIG_ENDIAN(buffer);
-      }
-      return v8::Int32::New(value);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::GetUint16(const v8::Arguments& arguments) {
-  bool little_endian = false;
-  switch (arguments.Length()) {
-  case 2:
-    little_endian = arguments[1]->ToBoolean()->Value();
-    // Fall through
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset + sizeof(uint16_t) > self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      uint16_t value;
-      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
-      if (little_endian) {
-        value = MOKA_UINT16_LITTLE_ENDIAN(buffer);
-      } else {
-        value = MOKA_UINT16_BIG_ENDIAN(buffer);
-      }
-      return v8::Uint32::New(value);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::GetInt32(const v8::Arguments& arguments) {
-  bool little_endian = false;
-  switch (arguments.Length()) {
-  case 2:
-    little_endian = arguments[1]->ToBoolean()->Value();
-    // Fall through
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset + sizeof(int32_t) > self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      int32_t value;
-      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
-      if (little_endian) {
-        value = MOKA_INT32_LITTLE_ENDIAN(buffer);
-      } else {
-        value = MOKA_INT32_BIG_ENDIAN(buffer);
-      }
-      return v8::Int32::New(value);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::GetUint32(const v8::Arguments& arguments) {
-  bool little_endian = false;
-  switch (arguments.Length()) {
-  case 2:
-    little_endian = arguments[1]->ToBoolean()->Value();
-    // Fall through
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset + sizeof(uint32_t) > self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      uint32_t value;
-      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
-      if (little_endian) {
-        value = MOKA_UINT32_LITTLE_ENDIAN(buffer);
-      } else {
-        value = MOKA_UINT32_BIG_ENDIAN(buffer);
-      }
-      return v8::Uint32::New(value);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::GetFloat32(const v8::Arguments& arguments) {
-  bool little_endian = false;
-  switch (arguments.Length()) {
-  case 2:
-    little_endian = arguments[1]->ToBoolean()->Value();
-    // Fall through
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset + sizeof(float) > self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      float value;
-      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
-      if (little_endian) {
-        value = MOKA_FLOAT_LITTLE_ENDIAN(buffer);
-      } else {
-        value = MOKA_FLOAT_BIG_ENDIAN(buffer);
-      }
-      return v8::Number::New(value);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::GetDouble64(const v8::Arguments& arguments) {
-  bool little_endian = false;
-  switch (arguments.Length()) {
-  case 2:
-    little_endian = arguments[1]->ToBoolean()->Value();
-    // Fall through
-  case 1:
-    if (arguments[0]->IsUint32()) {
-      uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-      ArrayBufferView* self = static_cast<ArrayBufferView*>(
-          arguments.This()->GetPointerFromInternalField(0));
-      if (byte_offset + sizeof(double) > self->GetByteLength()) {
-        return v8::ThrowException(v8::Exception::RangeError(
-              v8::String::New("Attempt to read beyond the end of the view")));
-      }
-      double value = 0;
-      int8_t* buffer = static_cast<int8_t*>(self->GetBuffer()) + byte_offset;
-      if (little_endian) {
-        value = MOKA_DOUBLE_LITTLE_ENDIAN(buffer);
-      } else {
-        value = MOKA_DOUBLE_BIG_ENDIAN(buffer);
-      }
-      return v8::Number::New(value);
-    } else {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-  default:
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("One argument required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::SetInt8(const v8::Arguments& arguments) {
-  if (2 == arguments.Length()) {
-    if (!arguments[1]->IsInt32()) {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument two must be a byte")));
-    }
-    if (!arguments[0]->IsUint32()) {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-    uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-    ArrayBufferView* self = static_cast<ArrayBufferView*>(
-        arguments.This()->GetPointerFromInternalField(0));
-    if (byte_offset >= self->GetByteLength()) {
-      return v8::ThrowException(v8::Exception::RangeError(
-            v8::String::New("Attempt to write beyond the end of the view")));
-    }
-    static_cast<int8_t*>(self->GetBuffer())[byte_offset] =
-      static_cast<int8_t>(arguments[1]->ToInt32()->Value());
-    return v8::Null();
-  } else {
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Two arguments required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::SetUint8(const v8::Arguments& arguments) {
-  if (2 == arguments.Length()) {
-    if (!arguments[1]->IsUint32()) {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument two must be an unsigned byte")));
-    }
-    if (!arguments[0]->IsUint32()) {
-      return v8::ThrowException(v8::Exception::TypeError(
-            v8::String::New("Argument one must be an unsigned long")));
-    }
-    uint32_t byte_offset = arguments[0]->ToUint32()->Value();
-    ArrayBufferView* self = static_cast<ArrayBufferView*>(
-        arguments.This()->GetPointerFromInternalField(0));
-    if (byte_offset >= self->GetByteLength()) {
-      return v8::ThrowException(v8::Exception::RangeError(
-            v8::String::New("Attempt to write beyond the end of the view")));
-    }
-    static_cast<uint8_t*>(self->GetBuffer())[byte_offset] =
-      static_cast<uint8_t>(arguments[1]->ToUint32()->Value());
-    return v8::Null();
-  } else {
-    return v8::ThrowException(v8::Exception::TypeError(
-          v8::String::New("Two arguments required")));
-  }
-}
-
-v8::Handle<v8::Value> DataView::SetInt16(const v8::Arguments& arguments) {
-  return v8::Undefined();
-}
-
-v8::Handle<v8::Value> DataView::SetUint16(const v8::Arguments& arguments) {
-  return v8::Undefined();
-}
-
-v8::Handle<v8::Value> DataView::SetInt32(const v8::Arguments& arguments) {
-  return v8::Undefined();
-}
-
-v8::Handle<v8::Value> DataView::SetUint32(const v8::Arguments& arguments) {
-  return v8::Undefined();
-}
-
-v8::Handle<v8::Value> DataView::SetFloat32(const v8::Arguments& arguments) {
-  return v8::Undefined();
-}
-
-v8::Handle<v8::Value> DataView::SetDouble64(const v8::Arguments& arguments) {
-  return v8::Undefined();
-}
-
-// Private V8 interface
 
 } // namespace moka
 

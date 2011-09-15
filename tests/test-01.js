@@ -34,14 +34,16 @@ for (var i = 0; i < a.length; ++i) {
 print();
 
 var b = new DataView(a.arrayBuffer);
-for (var i = 0; i < b.byteLength - (Int16Array.BYTES_PER_ELEMENT - 1); ++i) {
-	print(b.getInt16(i, false));
+for (var i = 0; i < b.byteLength - (Int32Array.BYTES_PER_ELEMENT - 1); ++i) {
+	print(b.getInt32(i, false));
 }
 print();
 
-for (var i = 0; i < b.byteLength - (Int16Array.BYTES_PER_ELEMENT - 1); ++i) {
-	print(b.getInt16(i, true));
+for (var i = 0; i < b.byteLength - (Int32Array.BYTES_PER_ELEMENT - 1); ++i) {
+	print(b.getInt32(i, true));
 }
+print();
+
 print('foo: ' + b.getDouble64(0, false));
 print('foo: ' + b.getDouble64(0, true));
 print();
