@@ -29,6 +29,8 @@
 #include "config.h"
 #endif
 
+#include <cerrno>
+#include <cstdlib>
 #include <cstring>
 #include "moka/typed-array.h"
 #include "moka/module.h"
@@ -130,8 +132,21 @@ v8::Handle<v8::Value> TypedArray::Set(const v8::Arguments& arguments) {
           return v8::ThrowException(v8::Exception::RangeError(
                 v8::String::New("Offset is out of range")));
         }
-        for (uint32_t index = 0; index < self->GetLength(); ++index) {
-          arguments.This()->Set(index + offset, object->Get(index));
+        if (self->GetBuffer() == that->GetBuffer()
+            && self->GetByteOffset() + self->GetByteLength()
+            > that->GetByteOffset()) {
+          int8_t* buffer = static_cast<int8_t*>(
+              ::malloc(self->GetByteLength()));
+          if (!buffer) {
+            return v8::ThrowException(Module::ErrnoException::New(errno));
+          }
+          ::memcpy(buffer, that->GetBuffer(), that->GetByteLength());
+          ::memcpy(static_cast<int8_t*>(self->GetBuffer()) + offset,
+              buffer, that->GetByteLength());
+          ::free(buffer);
+        } else {
+          ::memcpy(static_cast<int8_t*>(self->GetBuffer()) + offset,
+              that->GetBuffer(), that->GetByteLength());
         }
       } else {
         return v8::ThrowException(v8::Exception::TypeError(
