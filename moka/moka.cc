@@ -37,22 +37,20 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-void Report(v8::TryCatch& try_catch)
-{
+void Report(v8::TryCatch& try_catch) {
   v8::HandleScope handle_scope;
   v8::Local<v8::Message> message = try_catch.Message();
   if (message.IsEmpty()) {
-    printf("%s\n", *v8::String::Utf8Value(try_catch.Exception()));
+    fprintf(stderr, "%s\n", *v8::String::Utf8Value(try_catch.Exception()));
     return;
   }
-  printf("[%s:%d] %s\n",
+  fprintf(stderr, "[%s:%d] %s\n",
       *v8::String::Utf8Value(message->GetScriptResourceName()),
       message->GetLineNumber(), *v8::String::Utf8Value(try_catch.Exception()));
 }
 
-int main(int argc, char *argv[])
-{
-  if (argc != 2) {
+int main(int argc, char *argv[]) {
+  if (argc < 2) {
     fprintf(stderr, "error: %s <script>\n", argv[0]);
     return 1;
   }
