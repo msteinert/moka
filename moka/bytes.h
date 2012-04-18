@@ -150,14 +150,14 @@ struct moka::bytes::Swap<T, 8> {
       | static_cast<uint64_t>(bytes[7]) << 56;
   }
   inline void operator()(T value, int8_t* bytes) {
-    bytes[0] = (value & 0x00000000000000ff);
-    bytes[1] = (value & 0x000000000000ff00) >> 8;
-    bytes[2] = (value & 0x0000000000ff0000) >> 16;
-    bytes[3] = (value & 0x00000000ff000000) >> 24;
-    bytes[4] = (value & 0x000000ff00000000) >> 32;
-    bytes[5] = (value & 0x0000ff0000000000) >> 40;
-    bytes[6] = (value & 0x00ff000000000000) >> 48;
-    bytes[7] = (value & 0xff00000000000000) >> 56;
+    bytes[0] = (value & 0x00000000000000ffLL);
+    bytes[1] = (value & 0x000000000000ff00LL) >> 8;
+    bytes[2] = (value & 0x0000000000ff0000LL) >> 16;
+    bytes[3] = (value & 0x00000000ff000000LL) >> 24;
+    bytes[4] = (value & 0x000000ff00000000LL) >> 32;
+    bytes[5] = (value & 0x0000ff0000000000LL) >> 40;
+    bytes[6] = (value & 0x00ff000000000000LL) >> 48;
+    bytes[7] = (value & 0xff00000000000000LL) >> 56;
   }
 };
 
@@ -228,14 +228,14 @@ struct moka::bytes::NoSwap<T, 8> {
       | bytes[7];
   }
   inline void operator()(T value, int8_t* bytes) {
-    bytes[0] = (value & 0xff00000000000000) >> 56;
-    bytes[1] = (value & 0x00ff000000000000) >> 48;
-    bytes[2] = (value & 0x0000ff0000000000) >> 40;
-    bytes[3] = (value & 0x000000ff00000000) >> 32;
-    bytes[4] = (value & 0x00000000ff000000) >> 24;
-    bytes[5] = (value & 0x0000000000ff0000) >> 16;
-    bytes[6] = (value & 0x000000000000ff00) >> 8;
-    bytes[7] = (value & 0x00000000000000ff);
+    bytes[0] = (value & 0xff00000000000000LL) >> 56;
+    bytes[1] = (value & 0x00ff000000000000LL) >> 48;
+    bytes[2] = (value & 0x0000ff0000000000LL) >> 40;
+    bytes[3] = (value & 0x000000ff00000000LL) >> 32;
+    bytes[4] = (value & 0x00000000ff000000LL) >> 24;
+    bytes[5] = (value & 0x0000000000ff0000LL) >> 16;
+    bytes[6] = (value & 0x000000000000ff00LL) >> 8;
+    bytes[7] = (value & 0x00000000000000ffLL);
   }
 };
 

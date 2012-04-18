@@ -79,7 +79,7 @@ v8::Handle<v8::Value> ScriptModule::Load() {
   }
   // Read the script into the buffer
   size_t size = ::fread(characters, 1, size_, file_);
-  if (static_cast<off_t>(size) < size_) {
+  if (size < size_) {
     if (ferror(file_)) {
       ::free(characters);
       char error[BUFSIZ];
