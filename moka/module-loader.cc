@@ -38,6 +38,7 @@
 #include "moka/module-factory.h"
 #include "moka/module-loader.h"
 #include <sstream>
+#include <unistd.h>
 
 namespace moka {
 

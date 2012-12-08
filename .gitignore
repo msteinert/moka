@@ -13,6 +13,8 @@
 *.Po
 *.swo
 *.swp
+.deps
+.dirstamp
 .libs
 aclocal.m4
 autom4te.cache
@@ -30,8 +32,9 @@ depcomp
 INSTALL
 install-sh
 libtool
-moka-*.tar.gz
 ltmain.sh
+moka-*.tar.gz
+moka/moka
 m4/libtool.m4
 m4/lt*.m4
 Makefile
